@@ -1,5 +1,7 @@
 # build output
 dist/
+.temp/
+
 # generated types
 .astro/
 
@@ -108,6 +110,7 @@ Thumbs.db
 .kotlin/
 
 /assets/
+.terraform/
 
 # AI Tracking
 PROGRESS.md
