@@ -1,0 +1,54 @@
+---
+interface Props {
+  tags: { name: string; count: number }[];
+  selectedTag?: string;
+}
+
+const { tags, selectedTag } = Astro.props;
+
+// Sort by count descending
+const sortedTags = tags.sort((a, b) => b.count - a.count);
+
+// Calculate relative sizes based on count
+const maxCount = Math.max(...tags.map(t => t.count));
+const minCount = Math.min(...tags.map(t => t.count));
+
+function getTagSize(count: number): string {
+  if (maxCount === minCount) return 'text-base';
+  const ratio = (count - minCount) / (maxCount - minCount);
+  if (ratio > 0.7) return 'text-xl';
+  if (ratio > 0.4) return 'text-lg';
+  return 'text-base';
+}
+---
+
+<div class="flex flex-wrap gap-3 justify-center">
+  {sortedTags.map((tag) => {
+    const isSelected = selectedTag === tag.name;
+    const sizeClass = getTagSize(tag.count);
+    
+    return (
+      <a
+        href={`/tags/${tag.name}`}
+        class:list={[
+          "px-4 py-2 font-mono border transition-all duration-200 hover:scale-105 group relative",
+          sizeClass,
+          isSelected 
+            ? "bg-[--color-terminal-green] text-[--color-bg] border-[--color-terminal-green]" 
+            : "bg-transparent text-[--color-terminal-green] border-[--color-terminal-green]/50 hover:border-[--color-terminal-green] hover:bg-[--color-terminal-green]/10"
+        ]}
+      >
+        <span class="relative z-10">#{tag.name}</span>
+        <span class:list={[
+          "ml-2 text-xs opacity-70",
+          isSelected ? "text-[--color-bg]" : "text-[--color-text-dim]"
+        ]}>
+          ({tag.count})
+        </span>
+        
+        <!-- Hover underline effect -->
+        <div class="absolute bottom-0 left-0 w-0 h-0.5 bg-[--color-terminal-green] group-hover:w-full transition-all duration-300"></div>
+      </a>
+    );
+  })}
+</div>

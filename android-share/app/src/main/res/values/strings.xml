@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Share the Vibe</string>
+    <string name="settings_subtitle">Configure your Supabase connection</string>
+    <string name="api_key_hint">Supabase Anon Key</string>
+    <string name="api_url_hint">API URL</string>
+    <string name="save_button">Save Settings</string>
+    <string name="instructions">How to use:\n\n1. Get your Supabase anon key from Project Settings → API\n2. Paste it above and tap Save\n3. Share any link from any app\n4. Select \"Share the Vibe\" from the share menu\n\nYour links will be saved to Supabase!</string>
+</resources>

@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    
+    <!-- Share icon - three connected dots -->
+    <group
+        android:translateX="27"
+        android:translateY="27">
+        
+        <!-- Top right circle -->
+        <path
+            android:fillColor="#FFFFFF"
+            android:pathData="M42,12a6,6 0,1 1,-12 0a6,6 0,1 1,12 0z"/>
+        
+        <!-- Middle left circle -->
+        <path
+            android:fillColor="#FFFFFF"
+            android:pathData="M12,27a6,6 0,1 1,-12 0a6,6 0,1 1,12 0z"/>
+        
+        <!-- Bottom right circle -->
+        <path
+            android:fillColor="#FFFFFF"
+            android:pathData="M42,42a6,6 0,1 1,-12 0a6,6 0,1 1,12 0z"/>
+        
+        <!-- Line from middle to top -->
+        <path
+            android:strokeColor="#FFFFFF"
+            android:strokeWidth="3"
+            android:pathData="M10,24L32,14"/>
+        
+        <!-- Line from middle to bottom -->
+        <path
+            android:strokeColor="#FFFFFF"
+            android:strokeWidth="3"
+            android:pathData="M10,30L32,40"/>
+    </group>
+</vector>

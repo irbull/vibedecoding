@@ -1,0 +1,64 @@
+{
+  "links": [
+    {
+      "id": "1",
+      "url": "https://www.anthropic.com/news/claude-model-spec",
+      "title": "Anthropic's Claude Model Spec: A Blueprint for AI Soul",
+      "summary": "Anthropic releases the full specification document that guides Claude's behavior, values, and decision-making. A fascinating look into how AI companies are thinking about alignment and character.",
+      "tags": ["ai", "anthropic", "alignment", "llm"],
+      "notes": "This is a must-read for anyone interested in AI alignment. The document reveals how Anthropic thinks about Claude's 'personality' and ethical guidelines.",
+      "dateShared": "2025-12-07T10:30:00Z",
+      "thumbnail": null
+    },
+    {
+      "id": "2",
+      "url": "https://cursor.sh/blog/ai-code-review",
+      "title": "The Future of Code Review is AI-Powered",
+      "summary": "Cursor explores how AI is transforming code review processes, making them faster and more comprehensive while catching bugs humans might miss.",
+      "tags": ["ai", "coding", "cursor", "developer-tools"],
+      "notes": "Interesting perspective on AI code review. The examples of bugs caught by AI that humans missed are compelling.",
+      "dateShared": "2025-12-06T15:45:00Z",
+      "thumbnail": null
+    },
+    {
+      "id": "3",
+      "url": "https://tailwindcss.com/blog/tailwindcss-v4",
+      "title": "Tailwind CSS v4.0: Faster, Smaller, Better",
+      "summary": "The new version of Tailwind CSS brings significant performance improvements, a new engine, and exciting new features for modern web development.",
+      "tags": ["css", "tailwind", "frontend", "web-dev"],
+      "notes": "Finally upgraded to v4! The new engine is noticeably faster. Love the new color palette options.",
+      "dateShared": "2025-12-05T09:20:00Z",
+      "thumbnail": null
+    },
+    {
+      "id": "4",
+      "url": "https://github.com/features/copilot",
+      "title": "GitHub Copilot: Your AI Pair Programmer",
+      "summary": "GitHub Copilot uses AI to suggest code and entire functions in real-time, right from your editor. Trained on billions of lines of public code.",
+      "tags": ["ai", "github", "coding", "copilot"],
+      "notes": "Comparing this with Cursor and Cline. Each has different strengths - Copilot is great for autocomplete, Cursor for full file edits.",
+      "dateShared": "2025-12-04T14:00:00Z",
+      "thumbnail": null
+    },
+    {
+      "id": "5",
+      "url": "https://astro.build/blog/astro-5/",
+      "title": "Astro 5.0: Content Layer, Server Islands & More",
+      "summary": "Astro 5.0 introduces the Content Layer API for flexible content management, Server Islands for dynamic content, and significant performance improvements.",
+      "tags": ["astro", "web-dev", "javascript", "static-site"],
+      "notes": "This is what powers Vibe Decoder! The Content Layer API is perfect for managing shared links.",
+      "dateShared": "2025-12-03T11:30:00Z",
+      "thumbnail": null
+    },
+    {
+      "id": "6",
+      "url": "https://www.rust-lang.org/learn",
+      "title": "Learn Rust: The Memory-Safe Systems Language",
+      "summary": "Comprehensive resources for learning Rust, from beginner tutorials to advanced concepts. Rust offers memory safety without garbage collection.",
+      "tags": ["rust", "programming", "systems", "learning"],
+      "notes": "Starting my Rust journey. The borrow checker is confusing at first but makes sense once you understand ownership.",
+      "dateShared": "2025-12-02T08:15:00Z",
+      "thumbnail": null
+    }
+  ]
+}
