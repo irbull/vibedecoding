@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Share the Vibe - Settings</title>
+  <link rel="stylesheet" href="options.css">
+</head>
+<body>
+  <div class="container">
+    <h1>⚙️ Settings</h1>
+    
+    <form id="settings-form">
+      <div class="form-group">
+        <label for="api-url">API URL</label>
+        <input 
+          type="url" 
+          id="api-url" 
+          placeholder="https://your-project.supabase.co/functions/v1/share"
+          required
+        >
+        <span class="hint">The endpoint to POST shared links to</span>
+      </div>
+      
+      <div class="form-group">
+        <label for="api-key">API Key</label>
+        <div class="input-with-toggle">
+          <input 
+            type="password" 
+            id="api-key" 
+            placeholder="Enter your API key"
+            required
+          >
+          <button type="button" id="toggle-key" class="toggle-btn" title="Show/Hide API Key">
+            👁️
+          </button>
+        </div>
+        <span class="hint">Your secret API key for authentication</span>
+      </div>
+      
+      <button type="submit" class="save-button">
+        Save Settings
+      </button>
+    </form>
+    
+    <div id="status" class="status hidden"></div>
+  </div>
+  
+  <script src="options.js"></script>
+</body>
+</html>
