@@ -2,21 +2,26 @@
 
 Personal Life Stream processing framework (DB -> Kafka -> Agents).
 
-## Infrastructure (Amazon MSK)
+## Infrastructure
 
-We use Terraform to manage the Kafka cluster.
+We use Terraform to manage the infrastructure. You can choose between **Amazon MSK** (Managed) or **EC2 Kafka** (Self-Managed).
 
 ### Prerequisites
 - Terraform installed
 - AWS Credentials configured (profile `irbull-msk`)
 
-### 🚀 Starting the Cluster (The "Two-Step")
-Because of AWS limitations, enabling Public Access requires a specific sequence:
+---
 
+### Option A: Amazon MSK (Managed Cluster)
+*   **Cost**: ~$70/month (2x t3.small brokers)
+*   **Pros**: Fully managed, high availability (Multi-AZ), IAM Auth.
+*   **Cons**: Expensive for learning, slow to create.
+
+#### 🚀 Starting MSK (The "Two-Step")
 1. **Create Cluster** (Public Access DISABLED):
    ```bash
    export AWS_PROFILE=irbull-msk
-   cd infrastructure
+   cd infrastructure/msk
    terraform apply
    ```
    *Wait ~30-40 mins.*
@@ -27,17 +32,38 @@ Because of AWS limitations, enabling Public Access requires a specific sequence:
    ```
    *Wait ~15-20 mins.*
 
-### 🛑 Stopping the Cluster
-To save money (~$2/day), destroy the cluster when not in use:
+#### 🛑 Stopping MSK
 ```bash
-export AWS_PROFILE=irbull-msk
-cd infrastructure
+cd infrastructure/msk
 terraform destroy
 ```
 
-### Connection Details
-Run this to get the connection string:
+---
+
+### Option B: EC2 Kafka (Single Node)
+*   **Cost**: ~$15/month (1x t3.small EC2 + EIP)
+*   **Pros**: Cheap, fast to spin up (~2 mins).
+*   **Cons**: Single point of failure, manual Docker management.
+
+#### 🚀 Starting EC2 Kafka
 ```bash
-cd infrastructure
-terraform output bootstrap_brokers_public_sasl_iam
+export AWS_PROFILE=irbull-msk
+cd infrastructure/ec2-kafka
+terraform apply
 ```
+*Wait ~2 mins for instance to boot and Docker to pull the image.*
+
+#### 🛑 Stopping EC2 Kafka
+```bash
+cd infrastructure/ec2-kafka
+terraform destroy
+```
+
+---
+
+### Connection Details
+After starting either option, run:
+```bash
+terraform output
+```
+to see the connection string (brokers).
