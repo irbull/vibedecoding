@@ -67,3 +67,28 @@ After starting either option, run:
 terraform output
 ```
 to see the connection string (brokers).
+
+## Kafka Integration
+
+This project includes scripts to manage topics and stream events from Postgres to Kafka.
+
+### Prerequisites
+- **AWS Profile**: You must have `AWS_PROFILE=irbull-msk` set (or your equivalent) to authenticate with Amazon MSK using IAM.
+- **Environment**: Ensure `.env` contains `KAFKA_BROKERS` and `KAFKA_AUTH_METHOD=aws-iam`.
+
+### Scripts
+
+#### 1. Initialize Topics
+Creates the `events.raw` topic on the cluster. Idempotent.
+```bash
+AWS_PROFILE=irbull-msk bun run kafka:init
+```
+
+#### 2. Start Publisher (Forwarder)
+Polls the database for new events and publishes them to Kafka. Uses `.checkpoint` to track progress.
+```bash
+AWS_PROFILE=irbull-msk bun run kafka:publish
+```
+
+### Known Issues
+- **TimeoutNegativeWarning**: When running with Bun, you may see `TimeoutNegativeWarning: ... is a negative number` at startup. This is a benign warning caused by strict timer validation in the runtime interacting with the KafkaJS library. It does not affect functionality.
