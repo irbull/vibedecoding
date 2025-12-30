@@ -8,9 +8,10 @@
  * 
  * Run with: bun run scripts/seed_db.ts
  * Run with clean: bun run scripts/seed_db.ts --clean
+ * Run clean only: bun run scripts/seed_db.ts --clean-only
  */
 
-import { supabase, type Subject, type Event, type Link, type LinkContent, type LinkMetadata, type Todo, type TemperatureReading, type TemperatureLatest } from "../src/lib/db";
+import { sql, closeDb, type Subject, type Event, type Link, type LinkContent, type LinkMetadata, type Todo, type TemperatureReading, type TemperatureLatest } from "../src/lib/db";
 import { linkSubjectId, normalizeUrl, sensorSubjectId, todoSubjectId } from "../src/lib/subject_id";
 
 // ============================================================
@@ -139,163 +140,109 @@ function daysAgo(days: number): string {
 async function seedLinks(): Promise<void> {
   console.log("\n📎 Seeding links...");
   
-  const subjects: Subject[] = [];
-  const events: Event[] = [];
-  const links: Link[] = [];
-  const linkContents: LinkContent[] = [];
-  const linkMetadatas: LinkMetadata[] = [];
+  let linkCount = 0;
+  let contentCount = 0;
+  let metadataCount = 0;
+  let eventCount = 0;
 
   for (let i = 0; i < SEED_LINKS.length; i++) {
     const link = SEED_LINKS[i];
     const urlNorm = normalizeUrl(link.url);
     const subjectId = linkSubjectId(link.url);
-    const createdAt = daysAgo(SEED_LINKS.length - i); // Older links first
+    const createdAt = daysAgo(SEED_LINKS.length - i);
 
-    // Subject
-    subjects.push({
-      subject: "link",
-      subject_id: subjectId,
-      created_at: createdAt,
-      display_name: link.title,
-      visibility: "public",
-      meta: {},
-    });
+    // Upsert subject
+    await sql`
+      INSERT INTO lifestream.subjects (subject, subject_id, created_at, display_name, visibility, meta)
+      VALUES ('link', ${subjectId}, ${createdAt}, ${link.title}, 'public', '{}')
+      ON CONFLICT (subject, subject_id) DO UPDATE SET display_name = EXCLUDED.display_name
+    `;
 
-    // Link
-    links.push({
-      subject_id: subjectId,
-      url: link.url,
-      url_norm: urlNorm,
-      created_at: createdAt,
-      source: link.source,
-      status: link.status,
-      visibility: "public",
-      pinned: i === 0, // Pin the first link
-    });
+    // Upsert link
+    await sql`
+      INSERT INTO lifestream.links (subject_id, url, url_norm, created_at, source, status, visibility, pinned)
+      VALUES (${subjectId}, ${link.url}, ${urlNorm}, ${createdAt}, ${link.source}, ${link.status}, 'public', ${i === 0})
+      ON CONFLICT (subject_id) DO UPDATE SET status = EXCLUDED.status
+    `;
+    linkCount++;
 
-    // Event: link.added
-    events.push({
-      occurred_at: createdAt,
-      source: link.source,
-      subject: "link",
-      subject_id: subjectId,
-      event_type: "link.added",
-      payload: { url: link.url, url_norm: urlNorm },
-    });
+    // Insert event: link.added
+    await sql`
+      INSERT INTO lifestream.events (occurred_at, source, subject, subject_id, event_type, payload)
+      VALUES (${createdAt}, ${link.source}, 'link', ${subjectId}, 'link.added', ${JSON.stringify({ url: link.url, url_norm: urlNorm })})
+    `;
+    eventCount++;
 
     // Content (for fetched+ statuses)
     if (link.status !== "new") {
-      linkContents.push({
-        subject_id: subjectId,
-        final_url: link.url,
-        title: link.title,
-        text_content: `Sample content for: ${link.title}`,
-        html_storage_key: null,
-        fetched_at: hoursAgo((SEED_LINKS.length - i) * 12),
-        fetch_error: null,
-      });
+      const fetchedAt = hoursAgo((SEED_LINKS.length - i) * 12);
+      await sql`
+        INSERT INTO lifestream.link_content (subject_id, final_url, title, text_content, fetched_at)
+        VALUES (${subjectId}, ${link.url}, ${link.title}, ${'Sample content for: ' + link.title}, ${fetchedAt})
+        ON CONFLICT (subject_id) DO UPDATE SET title = EXCLUDED.title
+      `;
+      contentCount++;
 
-      events.push({
-        occurred_at: hoursAgo((SEED_LINKS.length - i) * 12),
-        source: "agent:fetcher",
-        subject: "link",
-        subject_id: subjectId,
-        event_type: "content.fetched",
-        payload: { title: link.title },
-      });
+      await sql`
+        INSERT INTO lifestream.events (occurred_at, source, subject, subject_id, event_type, payload)
+        VALUES (${fetchedAt}, 'agent:fetcher', 'link', ${subjectId}, 'content.fetched', ${JSON.stringify({ title: link.title })})
+      `;
+      eventCount++;
     }
 
     // Metadata (for enriched+ statuses)
     if (link.status === "enriched" || link.status === "published") {
-      linkMetadatas.push({
-        subject_id: subjectId,
-        tags: link.tags,
-        summary_short: link.summary,
-        summary_long: `Extended summary: ${link.summary} This is additional context about the link.`,
-        language: "en",
-        model_version: "gpt-4-turbo-preview",
-      });
+      const enrichedAt = hoursAgo((SEED_LINKS.length - i) * 6);
+      await sql`
+        INSERT INTO lifestream.link_metadata (subject_id, tags, summary_short, summary_long, language, model_version)
+        VALUES (${subjectId}, ${link.tags}, ${link.summary}, ${'Extended summary: ' + link.summary}, 'en', 'gpt-4-turbo-preview')
+        ON CONFLICT (subject_id) DO UPDATE SET tags = EXCLUDED.tags
+      `;
+      metadataCount++;
 
-      events.push({
-        occurred_at: hoursAgo((SEED_LINKS.length - i) * 6),
-        source: "agent:enricher",
-        subject: "link",
-        subject_id: subjectId,
-        event_type: "enrichment.completed",
-        payload: { tags: link.tags, summary: link.summary },
-      });
+      await sql`
+        INSERT INTO lifestream.events (occurred_at, source, subject, subject_id, event_type, payload)
+        VALUES (${enrichedAt}, 'agent:enricher', 'link', ${subjectId}, 'enrichment.completed', ${JSON.stringify({ tags: link.tags, summary: link.summary })})
+      `;
+      eventCount++;
     }
 
     // Published event
     if (link.status === "published") {
-      events.push({
-        occurred_at: hoursAgo((SEED_LINKS.length - i) * 3),
-        source: "agent:publisher",
-        subject: "link",
-        subject_id: subjectId,
-        event_type: "publish.completed",
-        payload: {},
-      });
+      const publishedAt = hoursAgo((SEED_LINKS.length - i) * 3);
+      await sql`
+        INSERT INTO lifestream.events (occurred_at, source, subject, subject_id, event_type, payload)
+        VALUES (${publishedAt}, 'agent:publisher', 'link', ${subjectId}, 'publish.completed', '{}')
+      `;
+      eventCount++;
     }
   }
 
-  // Insert subjects
-  const { error: subjectsError } = await supabase
-    .from("subjects")
-    .upsert(subjects, { onConflict: "subject,subject_id" });
-  if (subjectsError) throw new Error(`Failed to insert subjects: ${subjectsError.message}`);
-
-  // Insert links
-  const { error: linksError } = await supabase
-    .from("links")
-    .upsert(links, { onConflict: "subject_id" });
-  if (linksError) throw new Error(`Failed to insert links: ${linksError.message}`);
-
-  // Insert link content
-  const { error: contentError } = await supabase
-    .from("link_content")
-    .upsert(linkContents, { onConflict: "subject_id" });
-  if (contentError) throw new Error(`Failed to insert link_content: ${contentError.message}`);
-
-  // Insert link metadata
-  const { error: metadataError } = await supabase
-    .from("link_metadata")
-    .upsert(linkMetadatas, { onConflict: "subject_id" });
-  if (metadataError) throw new Error(`Failed to insert link_metadata: ${metadataError.message}`);
-
-  // Insert events
-  const { error: eventsError } = await supabase.from("events").insert(events);
-  if (eventsError) throw new Error(`Failed to insert events: ${eventsError.message}`);
-
-  console.log(`  ✓ Inserted ${links.length} links`);
-  console.log(`  ✓ Inserted ${linkContents.length} link contents`);
-  console.log(`  ✓ Inserted ${linkMetadatas.length} link metadatas`);
-  console.log(`  ✓ Inserted ${events.length} link events`);
+  console.log(`  ✓ Inserted ${linkCount} links`);
+  console.log(`  ✓ Inserted ${contentCount} link contents`);
+  console.log(`  ✓ Inserted ${metadataCount} link metadatas`);
+  console.log(`  ✓ Inserted ${eventCount} link events`);
 }
 
 async function seedTemperature(): Promise<void> {
   console.log("\n🌡️  Seeding temperature readings...");
 
-  const subjects: Subject[] = [];
-  const events: Event[] = [];
-  const readings: TemperatureReading[] = [];
-  const latests: TemperatureLatest[] = [];
+  let readingsCount = 0;
+  let latestCount = 0;
+  let eventCount = 0;
 
   for (const sensor of SEED_SENSORS) {
     const subjectId = sensorSubjectId(sensor.location);
 
-    // Subject
-    subjects.push({
-      subject: "sensor",
-      subject_id: subjectId,
-      created_at: daysAgo(30),
-      display_name: `Temperature - ${sensor.location.replace("_", " ")}`,
-      visibility: "private",
-      meta: { type: "temperature", unit: "celsius" },
-    });
+    // Upsert subject
+    await sql`
+      INSERT INTO lifestream.subjects (subject, subject_id, created_at, display_name, visibility, meta)
+      VALUES ('sensor', ${subjectId}, ${daysAgo(30)}, ${'Temperature - ' + sensor.location.replace('_', ' ')}, 'private', ${JSON.stringify({ type: 'temperature', unit: 'celsius' })})
+      ON CONFLICT (subject, subject_id) DO UPDATE SET display_name = EXCLUDED.display_name
+    `;
 
     // Generate 24 hours of readings (every 10 minutes = 144 readings)
-    let latestReading: TemperatureReading | null = null;
+    let latestReading: { occurredAt: string; celsius: number; humidity: number; battery: number } | null = null;
     
     for (let i = 144; i >= 0; i--) {
       const occurredAt = new Date(NOW.getTime() - i * 10 * 60 * 1000).toISOString();
@@ -304,76 +251,52 @@ async function seedTemperature(): Promise<void> {
       const variation = Math.sin(i / 12) * 2 + (Math.random() - 0.5);
       const celsius = Math.round((sensor.baseTemp + variation) * 10) / 10;
       const humidity = Math.round((sensor.baseHumidity + (Math.random() - 0.5) * 5) * 10) / 10;
+      const battery = 95 - i * 0.01;
 
-      const reading: TemperatureReading = {
-        subject_id: subjectId,
-        occurred_at: occurredAt,
-        celsius,
-        humidity,
-        battery: 95 - i * 0.01, // Slowly decreasing battery
-      };
+      await sql`
+        INSERT INTO lifestream.temperature_readings (subject_id, occurred_at, celsius, humidity, battery)
+        VALUES (${subjectId}, ${occurredAt}, ${celsius}, ${humidity}, ${battery})
+        ON CONFLICT (subject_id, occurred_at) DO NOTHING
+      `;
+      readingsCount++;
+      
+      latestReading = { occurredAt, celsius, humidity, battery };
 
-      readings.push(reading);
-      latestReading = reading;
-
-      // Only create events for every 6th reading (hourly) to avoid too many events
+      // Only create events for every 6th reading (hourly)
       if (i % 6 === 0) {
-        events.push({
-          occurred_at: occurredAt,
-          source: "homeassistant",
-          subject: "sensor",
-          subject_id: subjectId,
-          event_type: "temp.reading_recorded",
-          payload: { celsius, humidity },
-        });
+        await sql`
+          INSERT INTO lifestream.events (occurred_at, source, subject, subject_id, event_type, payload)
+          VALUES (${occurredAt}, 'homeassistant', 'sensor', ${subjectId}, 'temp.reading_recorded', ${JSON.stringify({ celsius, humidity })})
+        `;
+        eventCount++;
       }
     }
 
     // Latest reading
     if (latestReading) {
-      latests.push({
-        subject_id: subjectId,
-        occurred_at: latestReading.occurred_at,
-        celsius: latestReading.celsius,
-        humidity: latestReading.humidity,
-        battery: latestReading.battery,
-      });
+      await sql`
+        INSERT INTO lifestream.temperature_latest (subject_id, occurred_at, celsius, humidity, battery)
+        VALUES (${subjectId}, ${latestReading.occurredAt}, ${latestReading.celsius}, ${latestReading.humidity}, ${latestReading.battery})
+        ON CONFLICT (subject_id) DO UPDATE SET 
+          occurred_at = EXCLUDED.occurred_at,
+          celsius = EXCLUDED.celsius,
+          humidity = EXCLUDED.humidity,
+          battery = EXCLUDED.battery
+      `;
+      latestCount++;
     }
   }
 
-  // Insert subjects
-  const { error: subjectsError } = await supabase
-    .from("subjects")
-    .upsert(subjects, { onConflict: "subject,subject_id" });
-  if (subjectsError) throw new Error(`Failed to insert subjects: ${subjectsError.message}`);
-
-  // Insert readings
-  const { error: readingsError } = await supabase
-    .from("temperature_readings")
-    .upsert(readings, { onConflict: "subject_id,occurred_at" });
-  if (readingsError) throw new Error(`Failed to insert temperature_readings: ${readingsError.message}`);
-
-  // Insert latest
-  const { error: latestError } = await supabase
-    .from("temperature_latest")
-    .upsert(latests, { onConflict: "subject_id" });
-  if (latestError) throw new Error(`Failed to insert temperature_latest: ${latestError.message}`);
-
-  // Insert events
-  const { error: eventsError } = await supabase.from("events").insert(events);
-  if (eventsError) throw new Error(`Failed to insert events: ${eventsError.message}`);
-
-  console.log(`  ✓ Inserted ${readings.length} temperature readings`);
-  console.log(`  ✓ Inserted ${latests.length} latest readings`);
-  console.log(`  ✓ Inserted ${events.length} temperature events`);
+  console.log(`  ✓ Inserted ${readingsCount} temperature readings`);
+  console.log(`  ✓ Inserted ${latestCount} latest readings`);
+  console.log(`  ✓ Inserted ${eventCount} temperature events`);
 }
 
 async function seedTodos(): Promise<void> {
   console.log("\n✅ Seeding todos...");
 
-  const subjects: Subject[] = [];
-  const events: Event[] = [];
-  const todos: Todo[] = [];
+  let todoCount = 0;
+  let eventCount = 0;
 
   for (let i = 0; i < SEED_TODOS.length; i++) {
     const todo = SEED_TODOS[i];
@@ -381,69 +304,41 @@ async function seedTodos(): Promise<void> {
     const createdAt = daysAgo(SEED_TODOS.length - i);
     const completedAt = todo.status === "done" ? hoursAgo((SEED_TODOS.length - i) * 4) : null;
 
-    // Subject
-    subjects.push({
-      subject: "todo",
-      subject_id: subjectId,
-      created_at: createdAt,
-      display_name: todo.title,
-      visibility: "private",
-      meta: { source: "todoist" },
-    });
+    // Upsert subject
+    await sql`
+      INSERT INTO lifestream.subjects (subject, subject_id, created_at, display_name, visibility, meta)
+      VALUES ('todo', ${subjectId}, ${createdAt}, ${todo.title}, 'private', ${JSON.stringify({ source: 'todoist' })})
+      ON CONFLICT (subject, subject_id) DO UPDATE SET display_name = EXCLUDED.display_name
+    `;
 
-    // Todo
-    todos.push({
-      subject_id: subjectId,
-      title: todo.title,
-      project: todo.project,
-      labels: todo.labels,
-      status: todo.status,
-      due_at: todo.status === "open" ? daysAgo(-Math.floor(Math.random() * 7)) : null, // Future due dates
-      completed_at: completedAt,
-      meta: { todoist_id: todo.id },
-    });
+    // Upsert todo
+    const dueAt = todo.status === "open" ? daysAgo(-Math.floor(Math.random() * 7)) : null;
+    await sql`
+      INSERT INTO lifestream.todos (subject_id, title, project, labels, status, due_at, completed_at, meta)
+      VALUES (${subjectId}, ${todo.title}, ${todo.project}, ${todo.labels}, ${todo.status}, ${dueAt}, ${completedAt}, ${JSON.stringify({ todoist_id: todo.id })})
+      ON CONFLICT (subject_id) DO UPDATE SET status = EXCLUDED.status, completed_at = EXCLUDED.completed_at
+    `;
+    todoCount++;
 
     // Event: todo.created
-    events.push({
-      occurred_at: createdAt,
-      source: "todoist",
-      subject: "todo",
-      subject_id: subjectId,
-      event_type: "todo.created",
-      payload: { title: todo.title, project: todo.project, labels: todo.labels },
-    });
+    await sql`
+      INSERT INTO lifestream.events (occurred_at, source, subject, subject_id, event_type, payload)
+      VALUES (${createdAt}, 'todoist', 'todo', ${subjectId}, 'todo.created', ${JSON.stringify({ title: todo.title, project: todo.project, labels: todo.labels })})
+    `;
+    eventCount++;
 
     // Event: todo.completed (if done)
     if (todo.status === "done" && completedAt) {
-      events.push({
-        occurred_at: completedAt,
-        source: "todoist",
-        subject: "todo",
-        subject_id: subjectId,
-        event_type: "todo.completed",
-        payload: {},
-      });
+      await sql`
+        INSERT INTO lifestream.events (occurred_at, source, subject, subject_id, event_type, payload)
+        VALUES (${completedAt}, 'todoist', 'todo', ${subjectId}, 'todo.completed', '{}')
+      `;
+      eventCount++;
     }
   }
 
-  // Insert subjects
-  const { error: subjectsError } = await supabase
-    .from("subjects")
-    .upsert(subjects, { onConflict: "subject,subject_id" });
-  if (subjectsError) throw new Error(`Failed to insert subjects: ${subjectsError.message}`);
-
-  // Insert todos
-  const { error: todosError } = await supabase
-    .from("todos")
-    .upsert(todos, { onConflict: "subject_id" });
-  if (todosError) throw new Error(`Failed to insert todos: ${todosError.message}`);
-
-  // Insert events
-  const { error: eventsError } = await supabase.from("events").insert(events);
-  if (eventsError) throw new Error(`Failed to insert events: ${eventsError.message}`);
-
-  console.log(`  ✓ Inserted ${todos.length} todos`);
-  console.log(`  ✓ Inserted ${events.length} todo events`);
+  console.log(`  ✓ Inserted ${todoCount} todos`);
+  console.log(`  ✓ Inserted ${eventCount} todo events`);
 }
 
 async function verifyCounts(): Promise<void> {
@@ -461,15 +356,8 @@ async function verifyCounts(): Promise<void> {
   ];
 
   for (const table of tables) {
-    const { count, error } = await supabase
-      .from(table)
-      .select("*", { count: "exact", head: true });
-    
-    if (error) {
-      console.log(`  ⚠️  ${table}: Error - ${error.message}`);
-    } else {
-      console.log(`  ✓ ${table}: ${count} rows`);
-    }
+    const result = await sql.unsafe(`SELECT COUNT(*) as count FROM lifestream.${table}`);
+    console.log(`  ✓ ${table}: ${result[0].count} rows`);
   }
 }
 
@@ -483,31 +371,24 @@ async function cleanDatabase(): Promise<void> {
   // Order matters due to foreign key constraints
   // Truncate in reverse dependency order
   const tables = [
-    "events",           // No dependencies
-    "annotations",      // Depends on links
-    "link_metadata",    // Depends on links
-    "link_content",     // Depends on links
-    "publish_state",    // No FK but related to links
-    "links",            // Depends on subjects (soft)
+    "events",
+    "annotations",
+    "link_metadata",
+    "link_content",
+    "publish_state",
+    "links",
     "temperature_latest",
     "temperature_readings",
     "todos",
-    "subjects",         // Base table
+    "subjects",
   ];
 
   for (const table of tables) {
-    const { error } = await supabase.from(table).delete().neq("subject_id", "___never_match___");
-    if (error) {
-      // Try alternative delete for tables without subject_id
-      if (table === "events") {
-        const { error: err2 } = await supabase.from(table).delete().neq("id", "00000000-0000-0000-0000-000000000000");
-        if (err2) console.log(`  ⚠️  ${table}: ${err2.message}`);
-        else console.log(`  ✓ Cleaned ${table}`);
-      } else {
-        console.log(`  ⚠️  ${table}: ${error.message}`);
-      }
-    } else {
+    try {
+      await sql.unsafe(`TRUNCATE lifestream.${table} CASCADE`);
       console.log(`  ✓ Cleaned ${table}`);
+    } catch (err) {
+      console.log(`  ⚠️  ${table}: ${err instanceof Error ? err.message : 'unknown error'}`);
     }
   }
 }
@@ -553,6 +434,8 @@ async function main(): Promise<void> {
   } catch (error) {
     console.error("\n❌ Operation failed:", error);
     process.exit(1);
+  } finally {
+    await closeDb();
   }
 }
 

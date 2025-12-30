@@ -10,7 +10,8 @@
     "test:db": "bun run scripts/test_connection.ts"
   },
   "dependencies": {
-    "@supabase/supabase-js": "^2.47.0"
+    "@supabase/supabase-js": "^2.47.0",
+    "postgres": "^3.4.7"
   },
   "devDependencies": {
     "@types/bun": "latest",
