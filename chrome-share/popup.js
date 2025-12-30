@@ -4,6 +4,9 @@ const shareButton = document.getElementById('share-btn');
 const statusElement = document.getElementById('status');
 const optionsLink = document.getElementById('options-link');
 
+// Lifestream Edge Function URL (new system)
+const LIFESTREAM_URL = ''; // Lifestream URL
+
 // Current tab URL
 let currentTabUrl = '';
 
@@ -53,24 +56,57 @@ shareButton.addEventListener('click', async () => {
   buttonText.textContent = 'Sharing';
 
   try {
-    const response = await fetch(settings.apiUrl, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'apikey': settings.apiKey,
-        'Authorization': `Bearer ${settings.apiKey}`,
-        'Prefer': 'return=minimal'
-      },
-      body: JSON.stringify({ url: currentTabUrl })
-    });
+    // POST to both endpoints in parallel
+    const [oldResult, lifestreamResult] = await Promise.allSettled([
+      // Old endpoint (existing articles table)
+      fetch(settings.apiUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'apikey': settings.apiKey,
+          'Authorization': `Bearer ${settings.apiKey}`,
+          'Prefer': 'return=minimal'
+        },
+        body: JSON.stringify({ url: currentTabUrl })
+      }),
+      // New lifestream endpoint
+      fetch(LIFESTREAM_URL, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${settings.apiKey}`
+        },
+        body: JSON.stringify({ url: currentTabUrl, source: 'chrome' })
+      })
+    ]);
 
-    if (response.ok) {
+    // Log results for debugging
+    console.log('Old endpoint result:', oldResult);
+    console.log('Lifestream result:', lifestreamResult);
+
+    // Check lifestream result (primary - the new system)
+    if (lifestreamResult.status === 'fulfilled' && lifestreamResult.value.ok) {
+      const data = await lifestreamResult.value.json().catch(() => ({}));
+      console.log('Lifestream success:', data);
       showStatus('✓ Link shared successfully!', 'success');
+    } else if (lifestreamResult.status === 'fulfilled') {
+      // Request completed but with error status
+      const errorText = await lifestreamResult.value.text().catch(() => '');
+      console.error('Lifestream failed:', lifestreamResult.value.status, errorText);
+      showStatus(`Error: Server returned ${lifestreamResult.value.status}`, 'error');
     } else {
-      const errorText = await response.text().catch(() => '');
-      console.error('Share failed:', response.status, errorText);
-      showStatus(`Error: Server returned ${response.status}`, 'error');
+      // Request rejected (network error)
+      console.error('Lifestream error:', lifestreamResult.reason);
+      showStatus('Error: Unable to connect to lifestream', 'error');
     }
+
+    // Log old endpoint status (for monitoring during transition)
+    if (oldResult.status === 'fulfilled' && oldResult.value.ok) {
+      console.log('Old endpoint: success');
+    } else {
+      console.warn('Old endpoint: failed (non-critical during transition)');
+    }
+
   } catch (error) {
     console.error('Share error:', error);
     showStatus('Error: Unable to connect', 'error');
