@@ -9,7 +9,9 @@
     "clean": "bun run scripts/seed_db.ts --clean-only",
     "test:db": "bun run scripts/test_connection.ts",
     "kafka:init": "bun run scripts/init_kafka.ts",
-    "kafka:publish": "bun run scripts/publish_events_to_kafka.ts"
+    "kafka:reset": "bun run scripts/reset_kafka.ts",
+    "kafka:publish": "bun run scripts/publish_events_to_kafka.ts",
+    "kafka:materialize": "bun run scripts/consume_kafka_materialize.ts"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.47.0",

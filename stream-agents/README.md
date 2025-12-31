@@ -90,5 +90,23 @@ Polls the database for new events and publishes them to Kafka. Uses `.checkpoint
 AWS_PROFILE=irbull-msk bun run kafka:publish
 ```
 
+#### 3. Start Materializer (Consumer)
+Consumes events from Kafka and materializes them into Postgres state tables. Idempotent (safe to replay).
+```bash
+AWS_PROFILE=irbull-msk bun run kafka:materialize
+```
+
+Handles these event types:
+| Event | Tables Updated |
+|-------|----------------|
+| `link.added` | `subjects`, `links` |
+| `content.fetched` | `link_content`, `links.status` |
+| `enrichment.completed` | `link_metadata`, `links.status`, `publish_state` |
+| `publish.completed` | `publish_state`, `links.status` |
+| `temp.reading_recorded` | `temperature_readings`, `temperature_latest` |
+| `todo.created` | `subjects`, `todos` |
+| `todo.completed` | `todos.completed_at` |
+| `annotation.added` | `subjects`, `annotations` |
+
 ### Known Issues
 - **TimeoutNegativeWarning**: When running with Bun, you may see `TimeoutNegativeWarning: ... is a negative number` at startup. This is a benign warning caused by strict timer validation in the runtime interacting with the KafkaJS library. It does not affect functionality.
