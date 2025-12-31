@@ -22,3 +22,14 @@ variable "project_name" {
   type        = string
   default     = "stream-agents-ec2"
 }
+
+variable "kafka_sasl_username" {
+  description = "Kafka SASL/PLAIN username"
+  type        = string
+}
+
+variable "kafka_sasl_password" {
+  description = "Kafka SASL/PLAIN password"
+  type        = string
+  sensitive   = true
+}

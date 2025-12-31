@@ -79,7 +79,11 @@ resource "aws_instance" "kafka" {
                 -e KAFKA_CONTROLLER_QUORUM_VOTERS=1@localhost:9093 \
                 -e KAFKA_LISTENERS=PLAINTEXT://0.0.0.0:9092,CONTROLLER://0.0.0.0:9093 \
                 -e KAFKA_ADVERTISED_LISTENERS="PLAINTEXT://$${PUBLIC_IP}:9092" \
-                -e KAFKA_LISTENER_SECURITY_PROTOCOL_MAP=CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT \
+                -e KAFKA_LISTENER_SECURITY_PROTOCOL_MAP=CONTROLLER:PLAINTEXT,PLAINTEXT:SASL_PLAINTEXT \
+                -e KAFKA_SASL_ENABLED_MECHANISMS=PLAIN \
+                -e KAFKA_LISTENER_NAME_PLAINTEXT_SASL_ENABLED_MECHANISMS=PLAIN \
+                -e KAFKA_LISTENER_NAME_PLAINTEXT_PLAIN_SASL_JAAS_CONFIG="org.apache.kafka.common.security.plain.PlainLoginModule required username=\"${var.kafka_sasl_username}\" password=\"${var.kafka_sasl_password}\" user_${var.kafka_sasl_username}=\"${var.kafka_sasl_password}\";" \
+                -e KAFKA_SASL_MECHANISM_INTER_BROKER_PROTOCOL=PLAIN \
                 -e KAFKA_CONTROLLER_LISTENER_NAMES=CONTROLLER \
                 -e KAFKA_INTER_BROKER_LISTENER_NAME=PLAINTEXT \
                 -e KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR=1 \

@@ -4,7 +4,9 @@ import { generateAuthToken } from 'aws-msk-iam-sasl-signer-js';
 
 const brokers = process.env.KAFKA_BROKERS?.split(',') || ['localhost:9092'];
 const clientId = process.env.KAFKA_CLIENT_ID || 'stream-agents';
-const authMethod = process.env.KAFKA_AUTH_METHOD || 'none'; // 'aws-iam' or 'none'
+const authMethod = process.env.KAFKA_AUTH_METHOD || 'none'; // 'aws-iam', 'plain', or 'none'
+const plainUser = process.env.KAFKA_SASL_USERNAME;
+const plainPass = process.env.KAFKA_SASL_PASSWORD;
 
 console.log(`Initializing Kafka client with brokers: ${brokers.join(',')} (Auth: ${authMethod})`);
 
@@ -21,6 +23,16 @@ const getSaslConfig = (): SASLOptions | undefined => {
           value: result.token
         };
       }
+    };
+  }
+  if (authMethod === 'plain') {
+    if (!plainUser || !plainPass) {
+      throw new Error('KAFKA_SASL_USERNAME and KAFKA_SASL_PASSWORD are required for KAFKA_AUTH_METHOD=plain');
+    }
+    return {
+      mechanism: 'plain',
+      username: plainUser,
+      password: plainPass,
     };
   }
   return undefined;
