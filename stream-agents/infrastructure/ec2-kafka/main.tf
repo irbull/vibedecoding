@@ -33,3 +33,9 @@ variable "kafka_sasl_password" {
   type        = string
   sensitive   = true
 }
+
+variable "kafka_domain" {
+  description = "Domain name for Kafka TLS endpoint (e.g., kafka.example.com)"
+  type        = string
+  default     = "kafka.vibedecoding.io"
+}

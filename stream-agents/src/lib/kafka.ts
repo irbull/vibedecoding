@@ -38,10 +38,13 @@ const getSaslConfig = (): SASLOptions | undefined => {
   return undefined;
 };
 
+// Enable SSL for IAM auth, or when KAFKA_SSL=true (for TLS-terminated proxies)
+const useSSL = authMethod === 'aws-iam' || process.env.KAFKA_SSL === 'true';
+
 const kafkaConfig: any = {
   clientId,
   brokers,
-  ssl: authMethod === 'aws-iam', // IAM requires SSL
+  ssl: useSSL,
   connectionTimeout: 10000,
   authenticationTimeout: 10000,
   retry: {
