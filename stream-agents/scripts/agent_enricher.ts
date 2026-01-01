@@ -4,20 +4,25 @@
  * Consumes `content.fetched` events from Kafka, calls OpenAI to generate
  * tags and summaries, and emits `enrichment.completed` events to Postgres.
  *
- * Uses Fat Events pattern - reads text_content directly from event payload.
+ * Uses Kafka-native KTable pattern for tag alignment:
+ * - Consumes `tags.catalog` compacted topic to maintain known tags
+ * - Passes known tags to LLM for consistency
+ * - Emits new tags back to `tags.catalog`
  *
  * Run with: bun run agent:enricher
  */
 
 import { sql, closeDb } from '../src/lib/db';
-import { createConsumer } from '../src/lib/kafka';
+import { createConsumer, getProducer, disconnectKafka } from '../src/lib/kafka';
 import OpenAI from 'openai';
 import type { Consumer, EachMessagePayload } from 'kafkajs';
 
 const CONSUMER_GROUP = 'enricher-agent-v1';
-const TOPIC = 'events.raw';
+const EVENTS_TOPIC = 'events.raw';
+const TAGS_TOPIC = 'tags.catalog';
 const MODEL = 'gpt-4o-mini';
 const MAX_CONTENT_CHARS = 32000; // ~8K tokens for cost control
+const MAX_TAGS_IN_PROMPT = 100; // Limit tags in prompt to control size
 
 // ============================================================
 // Types
@@ -50,6 +55,38 @@ interface EnrichmentResult {
 const openai = new OpenAI();
 
 // ============================================================
+// Tag Catalog State (KTable)
+// ============================================================
+
+const knownTags = new Set<string>();
+
+async function updateTagCatalog(newTags: string[]): Promise<void> {
+  const actuallyNew = newTags.filter(t => !knownTags.has(t));
+
+  if (actuallyNew.length === 0) return;
+
+  // Add to local state
+  actuallyNew.forEach(t => knownTags.add(t));
+
+  // Emit updated catalog to Kafka
+  try {
+    const producer = await getProducer();
+    await producer.send({
+      topic: TAGS_TOPIC,
+      messages: [{
+        key: 'all',
+        value: JSON.stringify(Array.from(knownTags))
+      }]
+    });
+
+    console.log(`[enricher] Added ${actuallyNew.length} new tags: ${actuallyNew.join(', ')}`);
+  } catch (err) {
+    console.error(`[enricher] Failed to update tag catalog:`, err);
+    // Continue anyway - local state is still updated
+  }
+}
+
+// ============================================================
 // Idempotency
 // ============================================================
 
@@ -68,16 +105,25 @@ async function alreadyEnriched(subjectId: string): Promise<boolean> {
 
 async function enrichContent(
   title: string | null,
-  textContent: string
+  textContent: string,
+  existingTags: Set<string>
 ): Promise<EnrichmentResult> {
   // Truncate content for cost control
   const truncated = textContent.slice(0, MAX_CONTENT_CHARS);
 
-  const prompt = `Analyze this article and provide:
-1. 3-7 relevant tags (lowercase, hyphenated, e.g., "machine-learning", "web-development")
-2. A short summary (1-2 sentences, max 200 characters)
-3. A longer summary (2-3 paragraphs)
-4. The primary language (ISO 639-1 code, e.g., "en", "es", "fr")
+  // Build tag list for prompt (limit size)
+  const tagList = Array.from(existingTags).slice(0, MAX_TAGS_IN_PROMPT).join(', ');
+
+  const prompt = `Analyze this article and provide tags and summaries.
+
+EXISTING TAGS (prefer these when appropriate, but create new ones if needed):
+${tagList || '(none yet)'}
+
+Rules for tags:
+- Use 3-7 tags per article
+- Prefer existing tags when they fit
+- New tags should be lowercase, hyphenated (e.g., "machine-learning", "web-development")
+- Be specific but not too narrow
 
 ${title ? `Title: ${title}\n\n` : ''}Content:
 ${truncated}
@@ -85,8 +131,8 @@ ${truncated}
 Respond ONLY with valid JSON in this exact format:
 {
   "tags": ["tag1", "tag2"],
-  "summary_short": "...",
-  "summary_long": "...",
+  "summary_short": "1-2 sentences, max 200 chars",
+  "summary_long": "2-3 paragraphs",
   "language": "en"
 }`;
 
@@ -130,21 +176,23 @@ async function emitEnrichmentCompleted(
 }
 
 // ============================================================
-// Message Handler
+// Message Handlers
 // ============================================================
 
-async function handleMessage({ topic, partition, message }: EachMessagePayload): Promise<void> {
-  if (!message.value) {
-    return;
+function handleTagCatalogMessage(message: EachMessagePayload['message']): void {
+  if (!message.value) return;
+
+  try {
+    const tags: string[] = JSON.parse(message.value.toString());
+    knownTags.clear();
+    tags.forEach(t => knownTags.add(t));
+    console.log(`[enricher] Tag catalog updated: ${knownTags.size} tags`);
+  } catch (err) {
+    console.error(`[enricher] Failed to parse tag catalog:`, err);
   }
+}
 
-  const event: LifestreamEvent = JSON.parse(message.value.toString());
-
-  // Only process content.fetched events
-  if (event.event_type !== 'content.fetched') {
-    return;
-  }
-
+async function handleContentFetchedEvent(event: LifestreamEvent): Promise<void> {
   const { title, text_content, fetch_error } = event.payload as {
     title?: string;
     text_content?: string;
@@ -169,14 +217,17 @@ async function handleMessage({ topic, partition, message }: EachMessagePayload):
     return;
   }
 
-  console.log(`[enricher] Enriching: ${event.subject_id} (${text_content.length} chars)`);
+  console.log(`[enricher] Enriching: ${event.subject_id} (${text_content.length} chars, ${knownTags.size} known tags)`);
 
   try {
-    // Call LLM for enrichment
-    const result = await enrichContent(title ?? null, text_content);
+    // Call LLM for enrichment with known tags
+    const result = await enrichContent(title ?? null, text_content, knownTags);
 
     // Emit enrichment.completed event
     await emitEnrichmentCompleted(event.subject_id, result, event.id);
+
+    // Update tag catalog with any new tags
+    await updateTagCatalog(result.tags);
 
     console.log(`[enricher] Completed: ${event.subject_id} -> [${result.tags.join(', ')}]`);
   } catch (err) {
@@ -189,6 +240,26 @@ async function handleMessage({ topic, partition, message }: EachMessagePayload):
   }
 }
 
+async function handleMessage({ topic, message }: EachMessagePayload): Promise<void> {
+  // Handle tag catalog updates
+  if (topic === TAGS_TOPIC) {
+    handleTagCatalogMessage(message);
+    return;
+  }
+
+  // Handle events
+  if (!message.value) return;
+
+  const event: LifestreamEvent = JSON.parse(message.value.toString());
+
+  // Only process content.fetched events
+  if (event.event_type !== 'content.fetched') {
+    return;
+  }
+
+  await handleContentFetchedEvent(event);
+}
+
 // ============================================================
 // Main Consumer Loop
 // ============================================================
@@ -199,13 +270,14 @@ let isShuttingDown = false;
 async function main(): Promise<void> {
   console.log('🧠 Starting Enricher Agent...');
   console.log(`   Consumer Group: ${CONSUMER_GROUP}`);
-  console.log(`   Topic: ${TOPIC}`);
+  console.log(`   Topics: ${EVENTS_TOPIC}, ${TAGS_TOPIC}`);
   console.log(`   Model: ${MODEL}`);
   console.log('   Press Ctrl+C to stop.\n');
 
   consumer = await createConsumer(CONSUMER_GROUP);
 
-  await consumer.subscribe({ topic: TOPIC, fromBeginning: true });
+  // Subscribe to both topics
+  await consumer.subscribe({ topics: [EVENTS_TOPIC, TAGS_TOPIC], fromBeginning: true });
 
   await consumer.run({
     eachMessage: handleMessage,
@@ -226,6 +298,9 @@ async function shutdown(): Promise<void> {
     await consumer.disconnect();
     console.log('   Kafka consumer disconnected');
   }
+
+  await disconnectKafka();
+  console.log('   Kafka producer disconnected');
 
   await closeDb();
   console.log('   Database connection closed');
