@@ -142,11 +142,15 @@ async function handleEnrichmentCompleted(event: LifestreamEvent): Promise<void> 
   const shortSummary = summary_short ?? summary ?? null;
 
   // Upsert link_metadata (tags has NOT NULL DEFAULT '{}')
+  // Use CASE to prefer non-empty arrays over empty ones
   await sql`
     INSERT INTO lifestream.link_metadata (subject_id, tags, summary_short, summary_long, language, model_version)
     VALUES (${event.subject_id}, ${tags ?? []}, ${shortSummary}, ${summary_long ?? null}, ${language ?? null}, ${model_version ?? null})
     ON CONFLICT (subject_id) DO UPDATE SET
-      tags = COALESCE(EXCLUDED.tags, lifestream.link_metadata.tags),
+      tags = CASE
+        WHEN array_length(EXCLUDED.tags, 1) > 0 THEN EXCLUDED.tags
+        ELSE COALESCE(NULLIF(lifestream.link_metadata.tags, '{}'), EXCLUDED.tags)
+      END,
       summary_short = COALESCE(EXCLUDED.summary_short, lifestream.link_metadata.summary_short),
       summary_long = COALESCE(EXCLUDED.summary_long, lifestream.link_metadata.summary_long),
       language = COALESCE(EXCLUDED.language, lifestream.link_metadata.language),
