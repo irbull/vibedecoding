@@ -13,7 +13,8 @@
     "kafka:publish": "bun run scripts/publish_events_to_kafka.ts",
     "kafka:materialize": "bun run scripts/consume_kafka_materialize.ts",
     "agent:fetcher": "bun run scripts/agent_fetcher.ts",
-    "agent:enricher": "bun run scripts/agent_enricher.ts"
+    "agent:enricher": "bun run scripts/agent_enricher.ts",
+    "clean:link": "bun run scripts/clean_link.ts"
   },
   "dependencies": {
     "@mozilla/readability": "^0.6.0",
