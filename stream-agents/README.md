@@ -110,3 +110,25 @@ Handles these event types:
 
 ### Known Issues
 - **TimeoutNegativeWarning**: When running with Bun, you may see `TimeoutNegativeWarning: ... is a negative number` at startup. This is a benign warning caused by strict timer validation in the runtime interacting with the KafkaJS library. It does not affect functionality.
+
+### Troubleshooting
+
+#### DNS Resolution Fails After Terraform Destroy/Apply
+After tearing down and spinning up infrastructure, you may encounter DNS resolution failures:
+```
+openssl s_client -connect kafka.vibedecoding.io:9093
+# Error: nodename nor servname provided, or not known
+```
+
+Even though `nslookup` resolves correctly, tools like `ping`, `nc`, and `openssl` may fail. This is a **DNS cache issue** — your system cached a stale/empty result during the destroy.
+
+**Fix (macOS):**
+```bash
+sudo dscacheutil -flushcache; sudo killall -HUP mDNSResponder
+```
+
+Then verify:
+```bash
+ping -c 1 kafka.vibedecoding.io
+openssl s_client -connect kafka.vibedecoding.io:9093 -servername kafka.vibedecoding.io
+```
