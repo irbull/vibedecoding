@@ -11,12 +11,15 @@
     "kafka:init": "bun run scripts/init_kafka.ts",
     "kafka:reset": "bun run scripts/reset_kafka.ts",
     "kafka:publish": "bun run scripts/publish_events_to_kafka.ts",
-    "kafka:materialize": "bun run scripts/consume_kafka_materialize.ts"
+    "kafka:materialize": "bun run scripts/consume_kafka_materialize.ts",
+    "agent:fetcher": "bun run scripts/agent_fetcher.ts"
   },
   "dependencies": {
+    "@mozilla/readability": "^0.6.0",
     "@supabase/supabase-js": "^2.47.0",
     "aws-msk-iam-sasl-signer-js": "^1.0.1",
     "kafkajs": "^2.2.4",
+    "linkedom": "^0.18.12",
     "postgres": "^3.4.7"
   },
   "devDependencies": {
