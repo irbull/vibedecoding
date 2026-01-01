@@ -95,6 +95,14 @@ create table if not exists kafka_offsets (
   primary key (consumer_group, topic, partition)
 );
 
+-- Track publisher checkpoint (which events have been forwarded to Kafka)
+create table if not exists publisher_checkpoint (
+  publisher_id    text primary key default 'default',
+  last_timestamp  timestamptz not null,
+  last_event_id   uuid not null,
+  updated_at      timestamptz not null default now()
+);
+
 -- Extra dedupe barrier for events:
 -- Ensures we never insert the same Kafka record twice even if offset tracking gets weird.
 create table if not exists event_ingest_dedupe (

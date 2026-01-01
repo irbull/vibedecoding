@@ -1,8 +1,7 @@
-import { sql } from '../src/lib/db';
+import { sql, closeDb } from '../src/lib/db';
 import { getProducer, disconnectKafka } from '../src/lib/kafka';
-import { readFile, writeFile } from 'fs/promises';
 
-const CHECKPOINT_FILE = '.checkpoint';
+const PUBLISHER_ID = 'default';
 
 interface Checkpoint {
   timestamp: string;
@@ -10,24 +9,35 @@ interface Checkpoint {
 }
 
 async function getCheckpoint(): Promise<Checkpoint> {
-  try {
-    const data = await readFile(CHECKPOINT_FILE, 'utf-8');
-    const [timestamp, id] = data.trim().split(',');
-    if (!timestamp) throw new Error('Invalid checkpoint');
-    return { 
-      timestamp, 
-      id: id || '00000000-0000-0000-0000-000000000000' 
-    };
-  } catch {
-    return { 
-      timestamp: '1970-01-01T00:00:00.000Z', 
-      id: '00000000-0000-0000-0000-000000000000' 
+  const result = await sql`
+    SELECT last_timestamp::text, last_event_id::text
+    FROM lifestream.publisher_checkpoint
+    WHERE publisher_id = ${PUBLISHER_ID}
+  `;
+
+  if (result.length > 0) {
+    return {
+      timestamp: result[0].last_timestamp,
+      id: result[0].last_event_id,
     };
   }
+
+  // No checkpoint exists yet - start from beginning
+  return {
+    timestamp: '1970-01-01T00:00:00.000Z',
+    id: '00000000-0000-0000-0000-000000000000',
+  };
 }
 
-async function saveCheckpoint(cp: Checkpoint) {
-  await writeFile(CHECKPOINT_FILE, `${cp.timestamp},${cp.id}`, 'utf-8');
+async function saveCheckpoint(cp: Checkpoint): Promise<void> {
+  await sql`
+    INSERT INTO lifestream.publisher_checkpoint (publisher_id, last_timestamp, last_event_id)
+    VALUES (${PUBLISHER_ID}, ${cp.timestamp}::timestamptz, ${cp.id}::uuid)
+    ON CONFLICT (publisher_id) DO UPDATE SET
+      last_timestamp = EXCLUDED.last_timestamp,
+      last_event_id = EXCLUDED.last_event_id,
+      updated_at = now()
+  `;
 }
 
 async function main() {
@@ -93,6 +103,7 @@ async function main() {
 const shutdown = async () => {
   console.log('\nStopping...');
   await disconnectKafka();
+  await closeDb();
   process.exit(0);
 };
 
