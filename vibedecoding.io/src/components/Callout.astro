@@ -1,0 +1,48 @@
+---
+interface Props {
+  type: 'principle' | 'pattern' | 'tradeoff' | 'pitfall';
+}
+
+const { type } = Astro.props;
+
+const config = {
+  principle: {
+    label: 'Principle',
+    icon: '💡',
+    borderColor: 'border-stream-500',
+    bgColor: 'bg-stream-50',
+  },
+  pattern: {
+    label: 'Pattern',
+    icon: '🔄',
+    borderColor: 'border-emerald-500',
+    bgColor: 'bg-emerald-50',
+  },
+  tradeoff: {
+    label: 'Tradeoff',
+    icon: '⚖️',
+    borderColor: 'border-amber-500',
+    bgColor: 'bg-amber-50',
+  },
+  pitfall: {
+    label: 'Pitfall',
+    icon: '⚠️',
+    borderColor: 'border-red-500',
+    bgColor: 'bg-red-50',
+  },
+};
+
+const { label, icon, borderColor, bgColor } = config[type];
+---
+
+<aside class:list={['my-6 rounded-lg border-l-4 p-4', borderColor, bgColor]}>
+  <div class="flex items-center gap-2 mb-2">
+    <span class="text-lg" aria-hidden="true">{icon}</span>
+    <span class="font-semibold text-sm uppercase tracking-wide text-[var(--color-text)]">
+      {label}
+    </span>
+  </div>
+  <div class="text-[var(--color-text)] prose-sm">
+    <slot />
+  </div>
+</aside>

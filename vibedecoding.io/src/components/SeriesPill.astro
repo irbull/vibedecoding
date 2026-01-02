@@ -1,0 +1,21 @@
+---
+interface Props {
+  series: string;
+  part: number;
+  totalParts?: number;
+}
+
+const { series, part, totalParts } = Astro.props;
+const seriesSlug = series.toLowerCase().replace(/\s+/g, '-');
+---
+
+<a
+  href={`/series/${seriesSlug}`}
+  class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-stream-100 text-stream-700 hover:bg-stream-200 transition-colors"
+>
+  <span>{series}</span>
+  <span class="text-stream-500">·</span>
+  <span>
+    Part {part}{totalParts ? ` of ${totalParts}` : ''}
+  </span>
+</a>

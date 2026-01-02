@@ -1,0 +1,143 @@
+---
+import BaseLayout from './BaseLayout.astro';
+import SeriesPill from '../components/SeriesPill.astro';
+import TableOfContents from '../components/TableOfContents.astro';
+import { getCollection, type CollectionEntry } from 'astro:content';
+
+interface Props {
+  post: CollectionEntry<'posts'>;
+  headings: { depth: number; slug: string; text: string }[];
+}
+
+const { post, headings } = Astro.props;
+const { title, description, date, updated, series, part, tags, canonicalUrl } = post.data;
+
+const formattedDate = date.toLocaleDateString('en-US', {
+  year: 'numeric',
+  month: 'long',
+  day: 'numeric',
+});
+
+const formattedUpdated = updated?.toLocaleDateString('en-US', {
+  year: 'numeric',
+  month: 'long',
+  day: 'numeric',
+});
+
+// Get series posts for navigation
+let seriesPosts: CollectionEntry<'posts'>[] = [];
+let currentIndex = -1;
+let totalParts = 0;
+
+if (series) {
+  const allPosts = await getCollection('posts');
+  seriesPosts = allPosts
+    .filter((p: CollectionEntry<'posts'>) => p.data.series === series && p.data.status === 'published')
+    .sort((a: CollectionEntry<'posts'>, b: CollectionEntry<'posts'>) => (a.data.part || 0) - (b.data.part || 0));
+  totalParts = seriesPosts.length;
+  currentIndex = seriesPosts.findIndex((p) => p.slug === post.slug);
+}
+
+const prevPost = currentIndex > 0 ? seriesPosts[currentIndex - 1] : null;
+const nextPost = currentIndex < seriesPosts.length - 1 ? seriesPosts[currentIndex + 1] : null;
+---
+
+<BaseLayout
+  title={title}
+  description={description}
+  canonicalUrl={canonicalUrl}
+  ogType="article"
+  publishedTime={date}
+  modifiedTime={updated}
+>
+  <article class="max-w-4xl mx-auto px-4 sm:px-6 py-12">
+    <div class="lg:grid lg:grid-cols-[1fr_200px] lg:gap-12">
+      <!-- Main content -->
+      <div class="min-w-0">
+        <!-- Header -->
+        <header class="mb-8">
+          {series && part !== undefined && (
+            <div class="mb-4">
+              <SeriesPill series={series} part={part} totalParts={totalParts} />
+            </div>
+          )}
+
+          <h1 class="text-3xl sm:text-4xl font-bold text-[var(--color-text)] leading-tight">
+            {title}
+          </h1>
+
+          <div class="mt-4 flex flex-wrap items-center gap-x-4 gap-y-2 text-sm text-[var(--color-text-muted)]">
+            <time datetime={date.toISOString()}>
+              {formattedDate}
+            </time>
+            {formattedUpdated && (
+              <span>
+                Updated: {formattedUpdated}
+              </span>
+            )}
+          </div>
+
+          {tags.length > 0 && (
+            <div class="mt-4 flex flex-wrap gap-2">
+              {tags.map((tag) => (
+                <a
+                  href={`/tags/${tag}`}
+                  class="text-xs px-2 py-1 rounded bg-neutral-100 text-[var(--color-text-muted)] hover:text-[var(--color-accent)] transition-colors"
+                >
+                  #{tag}
+                </a>
+              ))}
+            </div>
+          )}
+        </header>
+
+        <!-- Post content -->
+        <div class="prose prose-neutral max-w-none">
+          <slot />
+        </div>
+
+        <!-- Series navigation -->
+        {(prevPost || nextPost) && (
+          <nav class="mt-12 pt-8 border-t border-[var(--color-border)]">
+            <div class="grid gap-4 sm:grid-cols-2">
+              {prevPost && (
+                <a
+                  href={`/posts/${prevPost.slug}`}
+                  class="group block p-4 border border-[var(--color-border)] rounded-lg hover:border-accent-500 transition-colors"
+                >
+                  <span class="text-xs text-[var(--color-text-muted)] uppercase tracking-wide">
+                    Previous
+                  </span>
+                  <span class="block mt-1 font-medium text-[var(--color-text)] group-hover:text-[var(--color-accent)] transition-colors">
+                    {prevPost.data.title}
+                  </span>
+                </a>
+              )}
+              {nextPost && (
+                <a
+                  href={`/posts/${nextPost.slug}`}
+                  class:list={[
+                    'group block p-4 border border-[var(--color-border)] rounded-lg hover:border-accent-500 transition-colors text-right',
+                    !prevPost && 'sm:col-start-2',
+                  ]}
+                >
+                  <span class="text-xs text-[var(--color-text-muted)] uppercase tracking-wide">
+                    Next
+                  </span>
+                  <span class="block mt-1 font-medium text-[var(--color-text)] group-hover:text-[var(--color-accent)] transition-colors">
+                    {nextPost.data.title}
+                  </span>
+                </a>
+              )}
+            </div>
+          </nav>
+        )}
+      </div>
+
+      <!-- TOC sidebar (desktop) -->
+      <aside class="hidden lg:block">
+        <TableOfContents headings={headings} />
+      </aside>
+    </div>
+  </article>
+</BaseLayout>

@@ -1,0 +1,80 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    /* Stream-inspired color palette - soft blues and purples */
+    --color-bg: #F5F7FA;
+    --color-text: #2C3E50;
+    --color-text-muted: #6B7C93;
+    --color-border: #D9E2EC;
+    --color-accent: #4A7CB5;
+    --color-accent-hover: #3B5998;
+    --color-accent-purple: #6B5B95;
+  }
+
+  html {
+    scroll-behavior: smooth;
+  }
+
+  body {
+    @apply bg-[var(--color-bg)] text-[var(--color-text)] antialiased;
+  }
+
+  /* Link styles */
+  a {
+    @apply text-[var(--color-accent)] hover:text-[var(--color-accent-hover)];
+  }
+
+  /* Focus styles */
+  :focus-visible {
+    @apply outline-2 outline-offset-2 outline-stream-500;
+  }
+
+  /* Selection styles */
+  ::selection {
+    @apply bg-stream-200 text-stream-900;
+  }
+}
+
+@layer components {
+  .prose {
+    @apply text-[var(--color-text)];
+  }
+
+  .prose a {
+    @apply text-[var(--color-accent)] no-underline hover:underline;
+  }
+
+  .prose strong {
+    @apply text-[var(--color-text)];
+  }
+
+  .prose h1,
+  .prose h2,
+  .prose h3,
+  .prose h4 {
+    @apply text-[var(--color-text)];
+  }
+
+  .prose code {
+    @apply bg-stream-100 px-1.5 py-0.5 rounded text-sm;
+  }
+
+  .prose pre {
+    @apply bg-stream-900 rounded-lg;
+  }
+
+  .prose pre code {
+    @apply bg-transparent p-0;
+  }
+
+  .prose blockquote {
+    @apply border-l-stream-500 text-[var(--color-text-muted)];
+  }
+
+  .prose hr {
+    @apply border-[var(--color-border)];
+  }
+}

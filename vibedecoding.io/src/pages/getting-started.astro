@@ -1,0 +1,102 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+---
+
+<BaseLayout title="Getting Started" description="Set up your own private life stream with the Vibe Decoding reference architecture.">
+  <div class="max-w-4xl mx-auto px-4 sm:px-6 py-12">
+    <header class="mb-12">
+      <h1 class="text-3xl sm:text-4xl font-bold text-[var(--color-text)]">Getting Started</h1>
+      <p class="mt-4 text-lg text-[var(--color-text-muted)]">
+        Ready to build your own stream? Here's the minimal path to get running.
+      </p>
+    </header>
+
+    <div class="prose prose-neutral max-w-none">
+      <div class="not-prose mb-8 p-4 rounded-lg border border-[var(--color-border)] bg-neutral-50">
+        <div class="flex items-center gap-3">
+          <svg class="w-6 h-6 text-[var(--color-text-muted)]" fill="currentColor" viewBox="0 0 24 24">
+            <path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/>
+          </svg>
+          <a
+            href="https://github.com/irbull/vibedecoding"
+            target="_blank"
+            rel="noopener noreferrer"
+            class="text-lg font-medium text-[var(--color-accent)] hover:underline"
+          >
+            github.com/irbull/vibedecoding
+          </a>
+        </div>
+      </div>
+
+      <h2>Prerequisites</h2>
+      <p>You'll need the following before getting started:</p>
+      <ul>
+        <li><a href="https://bun.sh" target="_blank" rel="noopener noreferrer">Bun</a> runtime</li>
+        <li><a href="https://supabase.com" target="_blank" rel="noopener noreferrer">Supabase</a> account (free tier works)</li>
+        <li>AWS account with <a href="https://developer.hashicorp.com/terraform/install" target="_blank" rel="noopener noreferrer">Terraform</a> installed (for Kafka infrastructure)</li>
+        <li><a href="https://platform.openai.com" target="_blank" rel="noopener noreferrer">OpenAI API key</a> (for the enricher agent)</li>
+      </ul>
+
+      <h2>Clone the Repository</h2>
+      <pre><code>git clone https://github.com/irbull/vibedecoding.git
+cd vibedecoding/stream-agents
+bun install</code></pre>
+
+      <h2>Configure Environment</h2>
+      <ol>
+        <li>Copy <code>.env.example</code> to <code>.env</code></li>
+        <li>Add your Supabase project URL and service role key</li>
+        <li>Add your OpenAI API key</li>
+        <li>Kafka credentials come after infrastructure setup (next step)</li>
+      </ol>
+
+      <h2>Deploy Database Schema</h2>
+      <p>
+        In your Supabase dashboard, open the SQL Editor and run the contents of <code>schema.sql</code>.
+        This creates the <code>lifestream</code> schema with all required tables.
+      </p>
+
+      <h2>Set Up Kafka</h2>
+      <p>
+        The system uses Kafka for durable event transport. The cheapest option is a single EC2 instance
+        running Kafka in KRaft mode (~$15/month):
+      </p>
+      <pre><code>cd infrastructure/ec2-kafka
+terraform init
+terraform apply</code></pre>
+      <p>
+        After Terraform completes, copy the broker address from the output and add it to your <code>.env</code> file.
+        See the <a href="https://github.com/irbull/vibedecoding/tree/main/stream-agents#kafka-infrastructure" target="_blank" rel="noopener noreferrer">repo README</a> for detailed setup instructions and the MSK alternative.
+      </p>
+
+      <h2>Start the System</h2>
+      <p>You'll need multiple terminal windows. Start each component:</p>
+      <pre><code># Terminal 1: Initialize and seed
+bun run kafka:init        # Create Kafka topics
+bun run seed              # Add test data
+
+# Terminal 2: Publisher (DB → Kafka)
+bun run kafka:publish
+
+# Terminal 3: Fetcher agent
+bun run agent:fetcher
+
+# Terminal 4: Enricher agent
+bun run agent:enricher
+
+# Terminal 5: Materializer (Kafka → DB)
+bun run kafka:materialize</code></pre>
+      <p>
+        Once running, any new links added to the database will flow through the pipeline:
+        fetched, enriched with AI-generated tags and summaries, and materialized back to queryable state.
+      </p>
+
+      <h2>Next Steps</h2>
+      <ul>
+        <li>Read the <a href="/start-here">Start Here</a> guide series to understand the architecture</li>
+        <li>Check the <a href="https://github.com/irbull/vibedecoding/tree/main/stream-agents#troubleshooting" target="_blank" rel="noopener noreferrer">repo README</a> for troubleshooting</li>
+        <li>Explore the <a href="/stream">Stream</a> to see example outputs</li>
+      </ul>
+    </div>
+  </div>
+</BaseLayout>

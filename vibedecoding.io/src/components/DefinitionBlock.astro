@@ -1,0 +1,22 @@
+---
+interface Props {
+  class?: string;
+}
+
+const { class: className = '' } = Astro.props;
+---
+
+<div
+  class:list={[
+    'border-l-4 border-stream-500 pl-6 py-4 my-8',
+    className,
+  ]}
+>
+  <p class="text-lg sm:text-xl text-[var(--color-text)] leading-relaxed">
+    <strong class="font-semibold">Vibe Decoding</strong> is the practice of turning
+    life's ambient signals into timely, contextual action.
+  </p>
+  <p class="mt-2 text-[var(--color-text-muted)]">
+    Events, context, agents, and real-time processing — assembled into a personal life stream.
+  </p>
+</div>

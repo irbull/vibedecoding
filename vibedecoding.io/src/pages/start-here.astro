@@ -1,0 +1,122 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import { getCollection, type CollectionEntry } from 'astro:content';
+
+// Get guides from the Vibe Decoding series
+const allGuides = await getCollection('guide');
+const seriesGuides = allGuides
+  .filter((guide: CollectionEntry<'guide'>) => guide.data.series === 'Vibe Decoding' && guide.data.status === 'published')
+  .sort((a: CollectionEntry<'guide'>, b: CollectionEntry<'guide'>) => (a.data.part || 0) - (b.data.part || 0));
+
+// Define the reading path with descriptions
+const readingPath = [
+  {
+    part: 0,
+    title: 'Conceptual Introduction',
+    description: 'What is Vibe Decoding? Understanding the core concept of turning ambient signals into timely action.',
+  },
+  {
+    part: 1,
+    title: 'Event Model & Life Stream',
+    description: 'Designing the event architecture that captures your digital life as a continuous stream.',
+  },
+  {
+    part: 2,
+    title: 'Agents & Enrichment Loops',
+    description: 'Building AI agents that process events, extract meaning, and create connections.',
+  },
+  {
+    part: 3,
+    title: 'Kafka Patterns',
+    description: 'Implementing durable event streaming for personal data with Apache Kafka.',
+  },
+  {
+    part: 4,
+    title: 'Flink: Decoding Time',
+    description: 'Real-time stream processing to surface insights at the moment of relevance.',
+  },
+  {
+    part: 5,
+    title: 'Voice Notes & Context Triggers',
+    description: 'Extending the life stream to voice, location, and contextual triggers.',
+  },
+];
+
+// Match reading path items with actual guides
+const pathWithGuides = readingPath.map((item) => {
+  const guide = seriesGuides.find((g) => g.data.part === item.part);
+  return {
+    ...item,
+    guide,
+    href: guide ? `/guide/${guide.slug}` : null,
+  };
+});
+---
+
+<BaseLayout title="Start Here" description="A guided path through the Vibe Decoding series.">
+  <div class="max-w-4xl mx-auto px-4 sm:px-6 py-12">
+    <header class="mb-12">
+      <h1 class="text-3xl sm:text-4xl font-bold text-[var(--color-text)]">Start Here</h1>
+      <p class="mt-4 text-lg text-[var(--color-text-muted)] max-w-2xl">
+        New to Vibe Decoding? This is your guided path through the core concepts and implementations.
+        Follow the series in order, or jump to what interests you most.
+      </p>
+    </header>
+
+    <div class="space-y-1">
+      {pathWithGuides.map((item, index) => (
+        <div class="relative">
+          {/* Connecting line */}
+          {index < pathWithGuides.length - 1 && (
+            <div class="absolute left-4 top-12 bottom-0 w-px bg-[var(--color-border)]" />
+          )}
+
+          <div class:list={[
+            'relative flex gap-4 py-4',
+            !item.href && 'opacity-60',
+          ]}>
+            {/* Part number circle */}
+            <div class:list={[
+              'relative z-10 w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium shrink-0',
+              item.href
+                ? 'bg-stream-600 text-white'
+                : 'bg-neutral-200 text-[var(--color-text-muted)]',
+            ]}>
+              {item.part}
+            </div>
+
+            {/* Content */}
+            <div class="flex-1 min-w-0">
+              {item.href ? (
+                <a href={item.href} class="group block">
+                  <h2 class="text-lg font-semibold text-[var(--color-text)] group-hover:text-[var(--color-accent)] transition-colors">
+                    {item.title}
+                  </h2>
+                  <p class="mt-1 text-[var(--color-text-muted)]">
+                    {item.description}
+                  </p>
+                </a>
+              ) : (
+                <div>
+                  <h2 class="text-lg font-semibold text-[var(--color-text)]">
+                    {item.title}
+                  </h2>
+                  <p class="mt-1 text-[var(--color-text-muted)]">
+                    {item.description}
+                  </p>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      ))}
+    </div>
+
+    <div class="mt-12 p-6 rounded-lg border border-[var(--color-border)] bg-neutral-50">
+      <h3 class="font-semibold text-[var(--color-text)]">Not sure where to start?</h3>
+      <p class="mt-2 text-[var(--color-text-muted)]">
+        Begin with <a href="/guide/vibe-decoding" class="text-[var(--color-accent)] hover:underline">Part 0: Vibe Decoding</a> for a conceptual overview of what we're building and why.
+      </p>
+    </div>
+  </div>
+</BaseLayout>

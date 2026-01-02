@@ -1,0 +1,53 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+---
+
+<BaseLayout title="About" description="About Vibe Decoding and the person behind it.">
+  <div class="max-w-4xl mx-auto px-4 sm:px-6 py-12">
+    <header class="mb-12">
+      <h1 class="text-3xl sm:text-4xl font-bold text-[var(--color-text)]">About</h1>
+    </header>
+
+    <div class="prose prose-neutral max-w-none">
+      <h2>What is Vibe Decoding?</h2>
+      <p>
+        Vibe Decoding is both a concept and a project. It's the practice of turning life's ambient
+        signals—bookmarks, notes, articles, conversations, ideas—into timely, contextual action.
+      </p>
+      <p>
+        Instead of letting information disappear into scattered apps and forgotten folders, Vibe Decoding
+        captures everything as events in a unified life stream. AI agents enrich these events,
+        building context and connections. The result: the right information surfaces at the right moment.
+      </p>
+
+      <h2>Why Build This?</h2>
+      <p>
+        I've always been frustrated by the gap between capturing information and using it. We have
+        incredible tools for saving things—but terrible tools for resurfacing them when they matter.
+      </p>
+      <p>
+        This project is my attempt to bridge that gap. It combines event streaming (Kafka), AI agents
+        (Claude), and real-time processing (Flink) into a personal knowledge system that actually works.
+      </p>
+
+      <h2>Who Am I?</h2>
+      <p>
+        I'm Ian Bull, a software engineer who's spent years thinking about information systems,
+        developer tools, and the intersection of AI with personal productivity.
+      </p>
+      <p>
+        You can find more of my work at <a href="https://ianbull.com" target="_blank" rel="noopener noreferrer">ianbull.com</a>.
+      </p>
+
+      <h2>Get in Touch</h2>
+      <p>
+        Have questions about Vibe Decoding? Want to share your own experiments with life streaming?
+        I'd love to hear from you.
+      </p>
+      <ul>
+        <li>Website: <a href="https://ianbull.com" target="_blank" rel="noopener noreferrer">ianbull.com</a></li>
+        <li>RSS: <a href="/rss.xml">Subscribe to updates</a></li>
+      </ul>
+    </div>
+  </div>
+</BaseLayout>

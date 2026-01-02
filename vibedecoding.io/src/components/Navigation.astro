@@ -1,0 +1,99 @@
+---
+import Wordmark from './Wordmark.astro';
+
+const currentPath = Astro.url.pathname;
+
+const navItems = [
+  { href: '/', label: 'Home' },
+  { href: '/start-here', label: 'Start Here' },
+  { href: '/getting-started', label: 'Getting Started' },
+  { href: '/stream', label: 'Stream' },
+  { href: '/about', label: 'About' },
+];
+
+function isActive(href: string): boolean {
+  if (href === '/') {
+    return currentPath === '/';
+  }
+  return currentPath.startsWith(href);
+}
+---
+
+<header class="border-b border-[var(--color-border)]">
+  <nav class="max-w-4xl mx-auto px-4 sm:px-6 py-4 flex items-center justify-between">
+    <Wordmark />
+
+    <!-- Desktop nav -->
+    <ul class="hidden sm:flex items-center gap-6">
+      {navItems.map((item) => (
+        <li>
+          <a
+            href={item.href}
+            class:list={[
+              'text-sm transition-colors',
+              isActive(item.href)
+                ? 'text-[var(--color-accent)] font-medium'
+                : 'text-[var(--color-text-muted)] hover:text-[var(--color-text)]',
+            ]}
+          >
+            {item.label}
+          </a>
+        </li>
+      ))}
+    </ul>
+
+    <!-- Mobile menu button -->
+    <button
+      id="mobile-menu-button"
+      class="sm:hidden p-2 -mr-2 text-[var(--color-text-muted)] hover:text-[var(--color-text)]"
+      aria-label="Toggle menu"
+      aria-expanded="false"
+    >
+      <svg
+        class="w-5 h-5"
+        fill="none"
+        stroke="currentColor"
+        viewBox="0 0 24 24"
+      >
+        <path
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          stroke-width="2"
+          d="M4 6h16M4 12h16M4 18h16"
+        />
+      </svg>
+    </button>
+  </nav>
+
+  <!-- Mobile nav -->
+  <div id="mobile-menu" class="hidden sm:hidden border-t border-[var(--color-border)]">
+    <ul class="px-4 py-3 space-y-2">
+      {navItems.map((item) => (
+        <li>
+          <a
+            href={item.href}
+            class:list={[
+              'block py-2 text-sm transition-colors',
+              isActive(item.href)
+                ? 'text-[var(--color-accent)] font-medium'
+                : 'text-[var(--color-text-muted)] hover:text-[var(--color-text)]',
+            ]}
+          >
+            {item.label}
+          </a>
+        </li>
+      ))}
+    </ul>
+  </div>
+</header>
+
+<script>
+  const button = document.getElementById('mobile-menu-button');
+  const menu = document.getElementById('mobile-menu');
+
+  button?.addEventListener('click', () => {
+    const isExpanded = button.getAttribute('aria-expanded') === 'true';
+    button.setAttribute('aria-expanded', String(!isExpanded));
+    menu?.classList.toggle('hidden');
+  });
+</script>

@@ -1,0 +1,84 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+---
+
+<BaseLayout title="vibedecoding">
+  <!-- Hero Section with Diagram -->
+  <section class="py-12 sm:py-16">
+    <div class="max-w-5xl mx-auto px-4 sm:px-6">
+      <!-- Diagram -->
+      <div class="mb-8">
+        <img
+          src="/images/stream-process.jpg"
+          alt="Vibe Decoding: Interpreting Life's Signals Over Time - showing event stream with agents (Materializer, Fetcher, Enricher, Pattern Detector) processing inputs like voice notes, links, and sensors into insights"
+          class="w-full rounded-lg shadow-lg"
+        />
+      </div>
+
+      <!-- Tagline and Description -->
+      <div class="text-center max-w-3xl mx-auto">
+        <h1 class="text-3xl sm:text-4xl font-bold text-[var(--color-text)] mb-4">
+          vibedecoding
+        </h1>
+        <p class="text-xl text-[var(--color-text-muted)] mb-6">
+          Turning life's ambient signals into timely, contextual action.
+        </p>
+        <p class="text-[var(--color-text-muted)] mb-8 max-w-2xl mx-auto">
+          Events flow in from your digital life. Agents observe, enrich, and loop context back.
+          The right information surfaces at the right moment.
+        </p>
+        <a
+          href="/start-here"
+          class="inline-flex items-center gap-2 px-6 py-3 bg-stream-600 hover:bg-stream-700 text-white font-medium rounded-lg transition-colors"
+        >
+          Start Here
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+          </svg>
+        </a>
+      </div>
+    </div>
+  </section>
+
+  <!-- How It Works -->
+  <section class="py-12 border-t border-[var(--color-border)]">
+    <div class="max-w-4xl mx-auto px-4 sm:px-6">
+      <h2 class="text-2xl font-semibold text-[var(--color-text)] mb-8 text-center">How It Works</h2>
+      <div class="grid gap-6 sm:grid-cols-3">
+        <div class="text-center">
+          <div class="w-12 h-12 mx-auto mb-4 rounded-full bg-stream-100 flex items-center justify-center">
+            <svg class="w-6 h-6 text-stream-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
+            </svg>
+          </div>
+          <h3 class="font-medium text-[var(--color-text)] mb-2">Events Flow In</h3>
+          <p class="text-sm text-[var(--color-text-muted)]">
+            Links, notes, voice memos, and sensor data stream into a unified event log.
+          </p>
+        </div>
+        <div class="text-center">
+          <div class="w-12 h-12 mx-auto mb-4 rounded-full bg-stream-100 flex items-center justify-center">
+            <svg class="w-6 h-6 text-stream-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+            </svg>
+          </div>
+          <h3 class="font-medium text-[var(--color-text)] mb-2">Agents Enrich</h3>
+          <p class="text-sm text-[var(--color-text-muted)]">
+            AI agents process each event, extracting meaning, themes, and connections.
+          </p>
+        </div>
+        <div class="text-center">
+          <div class="w-12 h-12 mx-auto mb-4 rounded-full bg-stream-100 flex items-center justify-center">
+            <svg class="w-6 h-6 text-stream-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
+            </svg>
+          </div>
+          <h3 class="font-medium text-[var(--color-text)] mb-2">Insights Surface</h3>
+          <p class="text-sm text-[var(--color-text-muted)]">
+            The right information appears at the right time, triggered by context.
+          </p>
+        </div>
+      </div>
+    </div>
+  </section>
+</BaseLayout>

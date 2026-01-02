@@ -1,0 +1,317 @@
+---
+title: "Voice Notes & Context Triggers"
+description: "Extending the life stream to voice, location, and contextual triggers."
+series: "Vibe Decoding"
+part: 5
+status: "published"
+canonicalUrl: "https://vibedecoding.io/guide/voice-context"
+---
+
+import Callout from '../../components/Callout.astro';
+
+So far, we've built a life stream that captures links, notes, and digital interactions. But our lives aren't purely digital. The insight you need might come from a voice memo recorded during a walk, a temperature sensor in your office, or the simple fact that it's Monday morning and you're at your desk.
+
+This part explores how to extend the life stream beyond text input—into voice, sensors, and contextual triggers that make the system aware of *when* and *where* you are, not just *what* you're consuming.
+
+## Beyond Text: Voice as Life Stream Input
+
+Text is great for structured thought. But some of our best ideas arrive when we're away from the keyboard—walking, driving, or falling asleep. Voice capture turns these fleeting thoughts into first-class events in your life stream.
+
+<Callout type="principle">
+Context makes information timely.
+</Callout>
+
+The goal isn't just transcription. It's about capturing the *moment*: what you were thinking, where you were, what prompted the thought. A voice note recorded during your morning walk has different energy than one dictated at your desk. The life stream should preserve that context.
+
+Consider the anatomy of a voice event:
+
+```typescript
+// Voice events capture more than just words
+interface VoiceEvent {
+  id: string;
+  type: 'voice.recorded';
+  occurred_at: Date;
+  payload: {
+    audio_storage_key: string;    // Reference to audio file
+    duration_seconds: number;
+    transcription?: string;        // Added after processing
+    transcription_model?: string;
+    language?: string;
+
+    // Context captured at recording time
+    location?: {
+      latitude: number;
+      longitude: number;
+      place_name?: string;
+    };
+    activity?: 'walking' | 'driving' | 'stationary';
+  };
+  metadata: {
+    source: 'phone' | 'watch' | 'desktop';
+    device_id?: string;
+  };
+}
+```
+
+The key insight: we capture context *at recording time*, not after. By the time you're back at your desk, you've forgotten that you recorded that voice memo while passing the coffee shop that reminded you of your friend's startup idea.
+
+## The Transcription Pipeline
+
+Raw audio isn't queryable. To make voice notes useful in the life stream, we need to transcribe them—and Whisper has made this remarkably accessible.
+
+The pipeline looks like this:
+
+1. **Capture**: Phone records audio, uploads to storage, emits `voice.recorded` event
+2. **Transcribe**: Agent consumes event, runs Whisper, emits `voice.transcribed` event
+3. **Enrich**: Same enrichment agents that process text can now process transcribed voice
+4. **Connect**: Voice note insights join the graph alongside links and written notes
+
+```typescript
+// Transcription agent pseudo-code
+async function handleVoiceRecorded(event: VoiceEvent): Promise<void> {
+  const audioBuffer = await storage.get(event.payload.audio_storage_key);
+
+  // Run Whisper (local or API)
+  const result = await whisper.transcribe(audioBuffer, {
+    model: 'whisper-1',
+    language: event.payload.language,
+  });
+
+  // Emit transcribed event
+  await emit({
+    type: 'voice.transcribed',
+    subject_id: event.id,
+    occurred_at: new Date(),
+    payload: {
+      transcription: result.text,
+      segments: result.segments,  // Word-level timing
+      transcription_model: 'whisper-1',
+    },
+    causation_id: event.id,  // Links back to original
+  });
+}
+```
+
+<Callout type="pattern">
+Voice Recorded → Transcription Agent → Voice Transcribed → Enrichment Agent → Insights
+</Callout>
+
+The beauty of this approach: voice notes flow through the exact same enrichment pipeline as everything else. The summarizer doesn't care if the text came from a blog post or a rambling voice memo. It extracts themes, entities, and connections just the same.
+
+One practical consideration: Whisper runs well locally on Apple Silicon, which means you can transcribe without sending audio to external APIs. For a personal life stream, this privacy-by-default approach matters.
+
+## Context Triggers: Location, Time, Activity
+
+Voice is just one dimension of context. The life stream becomes dramatically more useful when it understands:
+
+- **Where you are**: Home office, coffee shop, commuting
+- **When it is**: Morning routine, deep work hours, wind-down time
+- **What you're doing**: Walking, coding, in a meeting
+
+These aren't just metadata—they're triggers. The system can surface different insights based on context:
+
+```typescript
+// Context-aware surfacing
+interface ContextQuery {
+  time_of_day: 'morning' | 'afternoon' | 'evening';
+  location_type: 'home' | 'office' | 'transit' | 'other';
+  activity: 'focused' | 'browsing' | 'moving';
+  recent_topics: string[];  // What you've been reading/thinking about
+}
+
+async function surfaceRelevant(context: ContextQuery): Promise<Insight[]> {
+  // Morning at desk + recent interest in streaming?
+  // Surface that Kafka article you bookmarked last week.
+
+  // Walking + previous voice note about project idea?
+  // Remind you of related notes to marinate on.
+
+  // Evening wind-down + pattern of reading fiction?
+  // Don't surface work articles.
+}
+```
+
+<Callout type="tradeoff">
+Privacy vs. context richness. More context enables better insights, but requires collecting more personal data. Start minimal and add context types only when they prove valuable.
+</Callout>
+
+The key is that context is captured as events, not inferred after the fact. Your phone knows you started a walk at 7:30am—emit a `context.activity_started` event. Your calendar knows you're in focus time—that's an event too. The life stream becomes a unified log of both content *and* context.
+
+## Sensor Integration: Beyond Digital Events
+
+The life stream isn't limited to digital signals. Physical sensors can emit events too—and the existing architecture handles them seamlessly.
+
+Let's look at a real example: temperature sensors. The system already supports sensor data as first-class events:
+
+```sql
+-- From schema.sql
+-- Temperature domain (time-series + latest)
+
+create table if not exists temperature_readings (
+  subject_id      text not null,           -- "sensor:living_room"
+  occurred_at     timestamptz not null,
+  celsius         double precision not null,
+  humidity        double precision null,
+  battery         double precision null,
+
+  primary key (subject_id, occurred_at)
+);
+
+create table if not exists temperature_latest (
+  subject_id      text primary key,
+  occurred_at     timestamptz not null,
+  celsius         double precision not null,
+  humidity        double precision null,
+  battery         double precision null,
+  updated_at      timestamptz not null default now()
+);
+```
+
+The schema reveals a pattern common in life stream design: we store both the full time-series (`temperature_readings`) and a materialized latest-value table (`temperature_latest`). This lets us query historical data when needed while keeping current-state queries fast.
+
+Sensor subject IDs follow a consistent format:
+
+```typescript
+// From stream-agents/src/lib/subject_id.ts
+
+/**
+ * Generate a sensor subject_id
+ * Format: "sensor:{location}"
+ */
+export function sensorSubjectId(location: string): string {
+  return `sensor:${location.toLowerCase().replace(/\s+/g, "_")}`;
+}
+
+// Examples:
+// sensorSubjectId("Living Room")  → "sensor:living_room"
+// sensorSubjectId("Office Desk")  → "sensor:office_desk"
+```
+
+When a temperature event arrives, the materializer handles it like any other event:
+
+```typescript
+// From stream-agents/scripts/consume_kafka_materialize.ts
+
+async function handleTempReading(event: LifestreamEvent): Promise<void> {
+  const { celsius, humidity, battery } = event.payload as {
+    celsius?: number;
+    humidity?: number;
+    battery?: number;
+  };
+
+  if (celsius === undefined) {
+    console.log(`  [temp.reading] WARNING: Missing celsius in payload, skipping: ${event.subject_id}`);
+    return;
+  }
+
+  // Upsert subject (if not exists)
+  await sql`
+    INSERT INTO lifestream.subjects (subject, subject_id, created_at, visibility, meta)
+    VALUES ('sensor', ${event.subject_id}, ${event.occurred_at}, 'private', ${JSON.stringify({ type: 'temperature' })})
+    ON CONFLICT (subject, subject_id) DO NOTHING
+  `;
+
+  // Insert reading (time-series)
+  await sql`
+    INSERT INTO lifestream.temperature_readings (subject_id, occurred_at, celsius, humidity, battery)
+    VALUES (${event.subject_id}, ${event.occurred_at}, ${celsius}, ${humidity ?? null}, ${battery ?? null})
+    ON CONFLICT (subject_id, occurred_at) DO NOTHING
+  `;
+
+  // Upsert latest (only if newer)
+  await sql`
+    INSERT INTO lifestream.temperature_latest (subject_id, occurred_at, celsius, humidity, battery)
+    VALUES (${event.subject_id}, ${event.occurred_at}, ${celsius}, ${humidity ?? null}, ${battery ?? null})
+    ON CONFLICT (subject_id) DO UPDATE SET
+      occurred_at = EXCLUDED.occurred_at,
+      celsius = EXCLUDED.celsius,
+      humidity = EXCLUDED.humidity,
+      battery = EXCLUDED.battery
+    WHERE lifestream.temperature_latest.occurred_at < EXCLUDED.occurred_at
+  `;
+
+  console.log(`  [temp.reading] ${event.subject_id}: ${celsius}°C`);
+}
+```
+
+Notice the pattern: sensors are registered as subjects (just like links or todos), readings are inserted into the time-series table, and the latest value is maintained with a conditional update that only accepts newer readings. This handles out-of-order delivery gracefully.
+
+Why does temperature matter for a personal knowledge system? Context. When you recorded that voice note, was your office freezing or comfortable? When your focus dropped in the afternoon, was the room too warm? These correlations emerge when physical context joins the stream.
+
+## Future: Wearables & Ambient Data
+
+Today's implementation handles explicit inputs: links you save, notes you write, voice memos you record. But the next frontier is ambient data—signals captured passively that enrich context without demanding attention.
+
+**Wearables open new possibilities:**
+
+- **Heart rate variability**: Stress and recovery patterns that correlate with creative output
+- **Sleep quality**: Did poor sleep predict that scattered meeting? That brilliant insight?
+- **Activity levels**: Walking meetings, sedentary deep work, workout recovery
+
+```typescript
+// Future: Wearable events follow the same pattern
+interface WearableEvent {
+  id: string;
+  type: 'health.metric_recorded';
+  subject_id: string;  // "wearable:apple_watch_abc123"
+  occurred_at: Date;
+  payload: {
+    metric_type: 'heart_rate' | 'hrv' | 'sleep_stage' | 'activity';
+    value: number;
+    unit: string;
+    context?: {
+      activity: string;
+      location_type: string;
+    };
+  };
+}
+```
+
+**Ambient computing extends this further:**
+
+- **Audio context**: Not recording conversations, but detecting "in meeting" vs "focused silence"
+- **Screen time patterns**: Which apps were active when you had your best ideas?
+- **Environmental sensors**: Light levels, noise, air quality
+
+The architecture we've built scales naturally to these inputs. New event types flow through the same Kafka topics. New handlers materialize state into domain-specific tables. New agents can correlate physical context with digital content.
+
+<Callout type="principle">
+The life stream unifies digital and physical context into a single, queryable timeline.
+</Callout>
+
+## Privacy by Design
+
+With great context comes great responsibility. A few principles for building these systems:
+
+1. **Local first**: Process sensitive data on-device when possible. Whisper runs locally. Heart rate analysis can too.
+
+2. **Explicit consent layers**: Just because you *can* capture something doesn't mean you should. Build clear toggles for each context type.
+
+3. **Retention policies**: Not all data needs to live forever. Raw audio might be deleted after transcription. Detailed location history might aggregate over time.
+
+4. **No external sharing**: This is a personal system. Data stays in your infrastructure, enriched by your agents, for your insight.
+
+The goal isn't surveillance—it's awareness. The system should help you understand your own patterns, not create a comprehensive record for others to analyze.
+
+## Connecting It All
+
+Voice notes and sensor data might seem like separate domains, but they converge in the life stream. Consider this scenario:
+
+1. You're walking (activity context: moving)
+2. It's cool outside (temperature: 15°C)
+3. You record a voice memo about a project idea
+4. The transcription mentions "streaming architecture"
+5. The enrichment agent connects this to articles you bookmarked last week
+6. Later, at your desk (activity: focused), the system surfaces both the voice note and the related links
+
+No single event is magical. The magic is in the connections that emerge when all these signals flow through the same stream, processed by the same agents, and stored in the same queryable state.
+
+---
+
+Voice and context extend the life stream from a record of what you consume to a richer picture of how you think. The technical patterns are straightforward—just more event types, more handlers, more agents. The challenge is choosing which context to capture and how to surface it without overwhelming.
+
+For the next part of the series, we'll look at the other end of the pipeline: how insights actually surface at the right moment, and the notification patterns that make a life stream useful rather than noisy.
+
+**Previous**: [Part 4: Real-time Processing](/guide/realtime-processing) (coming soon)
+
+**Next**: Part 6: Surfacing Insights (coming soon)

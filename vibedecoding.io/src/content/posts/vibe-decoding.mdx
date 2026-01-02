@@ -1,0 +1,91 @@
+---
+title: "Vibe Decoding"
+description: "Turning life's ambient signals into timely action. An introduction to the concept of decoding your life stream."
+date: 2026-01-01
+series: "Vibe Decoding"
+part: 0
+tags: ["vibe-decoding", "introduction", "life-stream"]
+status: "published"
+canonicalUrl: "https://vibedecoding.io/posts/vibe-decoding/"
+hero:
+  style: "quiet"
+  accent: "indigo"
+---
+
+import Callout from '../../components/Callout.astro';
+
+Every day, we generate a continuous stream of signals—bookmarks saved, notes taken, articles read, conversations had, ideas sparked. Most of these signals disappear into the noise, never to resurface when they'd be most useful.
+
+**Vibe Decoding** is my attempt to change that.
+
+## The Problem
+
+We're surrounded by information, but starved for insight. The bookmark you saved six months ago that's suddenly relevant. The connection between two ideas you had weeks apart. The pattern in your interests that you've never noticed.
+
+These signals exist. They're scattered across apps, notes, and memory. The challenge isn't capturing them—we're already doing that, perhaps too well. The challenge is *decoding* them: extracting meaning, surfacing connections, and triggering action at the right moment.
+
+<Callout type="principle">
+Information becomes valuable not when it's stored, but when it resurfaces at the moment of relevance.
+</Callout>
+
+## The Life Stream
+
+At the heart of Vibe Decoding is the concept of a **life stream**—a unified event log of your digital (and eventually physical) interactions. Every link saved, every note written, every highlight captured becomes an event in this stream.
+
+But a stream of raw events isn't enough. What makes Vibe Decoding powerful is what happens next:
+
+1. **Events are enriched** — Agents process each event, extracting entities, themes, and connections
+2. **Context is built** — Over time, the system learns your interests, projects, and patterns
+3. **Insights surface** — When new information arrives, it's connected to what you already know
+4. **Action is triggered** — The right information appears at the right time
+
+<Callout type="pattern">
+Events → Enrichment → Context → Insight → Action
+</Callout>
+
+## The Tech Stack
+
+This isn't just philosophy—it's a working system. The current implementation uses:
+
+- **Kafka** for event streaming and durable message storage
+- **AI Agents** (powered by Claude) for enrichment and analysis
+- **Supabase** for structured storage and querying
+- **Flink** (coming soon) for real-time stream processing
+
+```typescript
+// A simplified event in the life stream
+interface LifeEvent {
+  id: string;
+  type: 'link_saved' | 'note_created' | 'highlight_captured';
+  timestamp: Date;
+  payload: unknown;
+  metadata: {
+    source: string;
+    context?: string;
+  };
+}
+```
+
+## What's Next
+
+This series will walk through building a complete Vibe Decoding system, from conceptual foundations to working code:
+
+- **Part 1**: The event model and life stream architecture
+- **Part 2**: Agents and enrichment loops
+- **Part 3**: Kafka patterns for personal streams
+- **Part 4**: Real-time processing with Flink
+- **Part 5**: Voice notes and context triggers
+
+<Callout type="tradeoff">
+We're building a personal system, not a product. That means we can optimize for insight over scale, and for personal context over generic recommendations.
+</Callout>
+
+## Why "Vibe"?
+
+The word "vibe" captures something important: we're not trying to build a perfect knowledge graph or a comprehensive database. We're trying to capture the *feel* of what you're interested in, the *direction* of your thinking, the *energy* around certain topics.
+
+Vibes are fuzzy. They're contextual. They change over time. That's a feature, not a bug.
+
+---
+
+Ready to start decoding? Head to [Part 1](/posts/life-stream-architecture) to explore the event model (coming soon), or check out the [Start Here](/start-here) page for a guided path through the series.
