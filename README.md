@@ -16,10 +16,11 @@ These signals exist. They're scattered across apps, notes, and memory. The chall
 
 At the heart of Vibe Decoding is the **life stream**—a unified event log of your digital interactions. Every link saved, every note written, every highlight captured becomes an event in this stream.
 
-**Events → Enrichment → Context → Insight → Action**
+**Capture → Events → Enrichment → Context → Insight**
 
 The system uses:
 
+- **Capture tools** (Chrome extension, Android app) to feed links into the stream
 - **Kafka** for durable event streaming and transport
 - **AI Agents** (powered by LLMs) for enrichment—fetching content, generating summaries, extracting tags
 - **Supabase/Postgres** for structured storage and querying
@@ -29,22 +30,46 @@ The system uses:
 
 ```
 vibedecoding/
+├── chrome-share/           # Chrome extension for one-click URL sharing
+├── android-share/          # Android app for share intent handling
 ├── stream-agents/          # Core event processing system
 │   ├── scripts/            # Agent implementations
-│   │   ├── agent_fetcher.ts      # Fetches and extracts URL content
-│   │   ├── agent_enricher.ts     # LLM-powered tagging and summarization
-│   │   ├── publish_events_to_kafka.ts    # DB → Kafka publisher
-│   │   └── consume_kafka_materialize.ts  # Kafka → DB materializer
-│   ├── src/lib/            # Shared utilities
-│   │   ├── db.ts           # Database client and types
-│   │   ├── kafka.ts        # Kafka client configuration
-│   │   └── subject_id.ts   # Stable entity identification
+│   ├── src/lib/            # Shared utilities (db, kafka, subject IDs)
 │   ├── infrastructure/     # Terraform for Kafka (EC2 or MSK)
 │   └── schema.sql          # Database schema
-│
+├── supabase/               # Edge functions for capture endpoints
 └── vibedecoding.io/        # Documentation website (Astro)
-    └── src/content/guide/  # Architecture guides
 ```
+
+## Capture Tools
+
+### Chrome Extension
+
+One-click URL sharing from your browser. Click the extension icon on any page to send it to your life stream.
+
+- Stores API settings securely in Chrome's sync storage
+- Dark-themed popup UI
+- See [chrome-share/README.md](chrome-share/README.md) for installation
+
+### Android App
+
+Share links from any Android app via the native share sheet. When you tap "Share" in your browser, Twitter, email, or any app—select "Share the Vibe" to capture it.
+
+- Registers as a share target in Android's share menu
+- Extracts URLs from shared text
+- Resolves redirects to get canonical URLs
+- See [android-share/README.md](android-share/README.md) for setup
+
+## Stream Processing
+
+Links flow from capture tools through Supabase Edge Functions into Postgres, then through Kafka to be processed by agents:
+
+1. **Publisher** — Watches Postgres for new events and publishes them to Kafka
+2. **Fetcher Agent** — Extracts page content, title, and text from URLs
+3. **Enricher Agent** — Calls an LLM for tagging and summarization
+4. **Materializer** — Projects events into queryable state tables
+
+Each agent is independent and idempotent—you can replay events without side effects.
 
 ## Key Concepts
 
@@ -54,15 +79,15 @@ Events are immutable facts about what happened. State is derived from events, no
 
 ### Subject IDs
 
-Every entity gets a stable, deterministic identifier. A link's ID is derived from its normalized URL. This ensures the same link saved twice produces the same ID, enabling correlation across time and sources.
+Every entity gets a stable, deterministic identifier. A link's ID is derived from its normalized URL (SHA256 hash). This ensures the same link saved twice produces the same ID, enabling correlation across time and sources.
 
 ### Agents
 
-Single-purpose consumers that transform events. The fetcher agent extracts content from URLs. The enricher agent calls an LLM for tagging and summarization. The materializer projects events into queryable tables. Each agent is independent and idempotent.
+Single-purpose consumers that transform events. The fetcher agent extracts content from URLs. The enricher agent calls an LLM for tagging and summarization. The materializer projects events into queryable tables.
 
 ## Getting Started
 
-See the [Getting Started](https://vibedecoding.io/getting-started) page for setup instructions, or dive into the code:
+See the [Getting Started](https://vibedecoding.io/getting-started) guide for full setup instructions, or dive into the code:
 
 ```bash
 cd stream-agents
@@ -81,7 +106,7 @@ The full guide series is available at [vibedecoding.io](https://vibedecoding.io)
 - **[Part 1: Event Model & Life Stream](https://vibedecoding.io/guide/life-stream-architecture)** — Event architecture and subject IDs
 - **[Part 2: Agents & Enrichment](https://vibedecoding.io/guide/agents-enrichment)** — Fetcher, enricher, and materializer
 - **[Part 3: Kafka Patterns](https://vibedecoding.io/guide/kafka-patterns)** — Topics, consumers, and infrastructure
-- **[Part 4: Flink](https://vibedecoding.io/guide/flink-time)** — Real-time stream processing (conceptual)
+- **[Part 4: Flink](https://vibedecoding.io/guide/flink-processing)** — Real-time stream processing (conceptual)
 - **[Part 5: Voice & Context](https://vibedecoding.io/guide/voice-context)** — Extending beyond text
 
 ## Why "Vibe"?
