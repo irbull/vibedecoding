@@ -10,12 +10,14 @@
  */
 
 import { sql, closeDb } from '../src/lib/db';
-import { createConsumer } from '../src/lib/kafka';
+import { createConsumer, getKafka } from '../src/lib/kafka';
 import { normalizeUrl } from '../src/lib/subject_id';
 import type { Consumer, EachMessagePayload } from 'kafkajs';
 
 const CONSUMER_GROUP = 'materializer-v1';
 const TOPIC = 'events.raw';
+const MAX_RETRIES = 3;
+const BASE_DELAY_MS = 1000;
 
 // ============================================================
 // Types
@@ -349,6 +351,69 @@ async function processEvent(event: LifestreamEvent): Promise<void> {
 }
 
 // ============================================================
+// Startup Offset Sync
+// ============================================================
+
+/**
+ * Calculate the target offset based on DB state and Kafka's available range.
+ * Returns the offset we should start consuming from.
+ */
+async function calculateTargetOffset(): Promise<bigint> {
+  const kafka = getKafka();
+  const admin = kafka.admin();
+  await admin.connect();
+
+  try {
+    // 1. Get our last processed offset from DB
+    const result = await sql`
+      SELECT MAX(kafka_offset) as last_offset
+      FROM lifestream.event_ingest_dedupe
+      WHERE topic = ${TOPIC} AND partition = 0
+    `;
+    const lastProcessedOffset = result[0]?.last_offset;
+    const desiredOffset = lastProcessedOffset !== null
+      ? BigInt(lastProcessedOffset) + 1n
+      : 0n;
+
+    // 2. Get Kafka's valid offset range for this partition
+    const offsets = await admin.fetchTopicOffsets(TOPIC);
+    const partitionInfo = offsets.find(p => p.partition === 0);
+    const earliestOffset = BigInt(partitionInfo?.low ?? '0');
+    const latestOffset = BigInt(partitionInfo?.high ?? '0');
+
+    console.log(`[materializer] DB last processed: ${lastProcessedOffset ?? 'none'}`);
+    console.log(`[materializer] Kafka range: [${earliestOffset}, ${latestOffset})`);
+
+    // 3. Clamp to valid range
+    let targetOffset = desiredOffset;
+    if (desiredOffset < earliestOffset) {
+      // Our desired offset was deleted by retention, start from earliest available
+      console.log(`[materializer] Desired offset ${desiredOffset} < earliest ${earliestOffset}, using earliest`);
+      targetOffset = earliestOffset;
+    } else if (desiredOffset > latestOffset) {
+      // Kafka was reset/recreated - our DB has stale offsets from the old Kafka
+      // Clear stale dedupe records so we can reprocess with new offsets
+      console.log(`[materializer] Desired offset ${desiredOffset} > latest ${latestOffset} - Kafka was reset`);
+      console.log(`[materializer] Clearing stale dedupe records for topic ${TOPIC}...`);
+
+      await sql`
+        DELETE FROM lifestream.event_ingest_dedupe
+        WHERE topic = ${TOPIC}
+      `;
+
+      console.log(`[materializer] Starting from earliest offset (${earliestOffset})`);
+      targetOffset = earliestOffset;
+    }
+
+    console.log(`[materializer] Will start from offset: ${targetOffset}`);
+    return targetOffset;
+
+  } finally {
+    await admin.disconnect();
+  }
+}
+
+// ============================================================
 // Main Consumer Loop
 // ============================================================
 
@@ -358,27 +423,51 @@ let isShuttingDown = false;
 async function handleMessage({ topic, partition, message }: EachMessagePayload): Promise<void> {
   const offset = BigInt(message.offset);
 
-  // Check idempotency
-  if (await isAlreadyProcessed(topic, partition, offset)) {
-    console.log(`Skipping duplicate: ${topic}:${partition}:${offset}`);
-    return;
+  for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
+    try {
+      // Check idempotency
+      if (await isAlreadyProcessed(topic, partition, offset)) {
+        console.log(`Skipping duplicate: ${topic}:${partition}:${offset}`);
+        return;
+      }
+
+      // Parse event
+      if (!message.value) {
+        console.log(`Empty message at ${topic}:${partition}:${offset}`);
+        await recordProcessed(topic, partition, offset);
+        return;
+      }
+
+      const event: LifestreamEvent = JSON.parse(message.value.toString());
+      console.log(`Processing: ${event.event_type} (${event.subject_id})`);
+
+      // Process event
+      await processEvent(event);
+
+      // Record as processed
+      await recordProcessed(topic, partition, offset);
+      return; // Success
+
+    } catch (err) {
+      console.error(`[materializer] Error processing ${topic}:${partition}:${offset} (attempt ${attempt}/${MAX_RETRIES}):`, err);
+
+      if (attempt === MAX_RETRIES) {
+        console.error(`[materializer] Max retries exceeded for offset ${offset}. Recording as processed to avoid blocking.`);
+        // Record as processed to avoid infinite loop on poison messages
+        try {
+          await recordProcessed(topic, partition, offset);
+        } catch (recordErr) {
+          console.error(`[materializer] Failed to record offset:`, recordErr);
+        }
+        return;
+      }
+
+      // Exponential backoff
+      const delay = BASE_DELAY_MS * Math.pow(2, attempt - 1);
+      console.log(`[materializer] Retrying in ${delay}ms...`);
+      await new Promise(r => setTimeout(r, delay));
+    }
   }
-
-  // Parse event
-  if (!message.value) {
-    console.log(`Empty message at ${topic}:${partition}:${offset}`);
-    await recordProcessed(topic, partition, offset);
-    return;
-  }
-
-  const event: LifestreamEvent = JSON.parse(message.value.toString());
-  console.log(`Processing: ${event.event_type} (${event.subject_id})`);
-
-  // Process event
-  await processEvent(event);
-
-  // Record as processed
-  await recordProcessed(topic, partition, offset);
 }
 
 async function main(): Promise<void> {
@@ -387,13 +476,66 @@ async function main(): Promise<void> {
   console.log(`   Topic: ${TOPIC}`);
   console.log('   Press Ctrl+C to stop.\n');
 
-  consumer = await createConsumer(CONSUMER_GROUP);
+  // Calculate target offset based on DB state and Kafka's available range
+  const targetOffset = await calculateTargetOffset();
+  let hasSeekPerformed = false;
 
-  await consumer.subscribe({ topic: TOPIC, fromBeginning: true });
+  while (!isShuttingDown) {
+    try {
+      consumer = await createConsumer(CONSUMER_GROUP);
 
-  await consumer.run({
-    eachMessage: handleMessage
-  });
+      await consumer.subscribe({ topic: TOPIC, fromBeginning: true });
+
+      // Use manual commits to keep Kafka and our DB in sync
+      await consumer.run({
+        autoCommit: false,
+        eachMessage: async (payload) => {
+          // Seek to our calculated target offset on first message
+          // This handles Kafka reset scenarios where our DB offset is stale
+          if (!hasSeekPerformed) {
+            const currentOffset = BigInt(payload.message.offset);
+            if (currentOffset !== targetOffset) {
+              console.log(`[materializer] Seeking from ${currentOffset} to ${targetOffset}`);
+              consumer!.seek({ topic: TOPIC, partition: payload.partition, offset: targetOffset.toString() });
+              hasSeekPerformed = true;
+              return; // Skip this message, we'll get the right one after seek
+            }
+            hasSeekPerformed = true;
+          }
+
+          await handleMessage(payload);
+          // Commit offset after successful processing
+          await consumer!.commitOffsets([{
+            topic: payload.topic,
+            partition: payload.partition,
+            offset: (BigInt(payload.message.offset) + 1n).toString()
+          }]);
+        }
+      });
+
+      // consumer.run() returns a promise that resolves when consumer stops
+      // If we get here without error, break the loop
+      break;
+
+    } catch (err) {
+      console.error('[materializer] Consumer error:', err);
+
+      if (isShuttingDown) break;
+
+      // Disconnect and retry
+      if (consumer) {
+        try {
+          await consumer.disconnect();
+        } catch (disconnectErr) {
+          console.error('[materializer] Error disconnecting:', disconnectErr);
+        }
+        consumer = null;
+      }
+
+      console.log('[materializer] Reconnecting in 5s...');
+      await new Promise(r => setTimeout(r, 5000));
+    }
+  }
 }
 
 // ============================================================
