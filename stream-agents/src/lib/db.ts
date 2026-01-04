@@ -55,6 +55,9 @@ export interface Link {
   status: LinkStatus;
   visibility: "public" | "private" | "unlisted";
   pinned: boolean;
+  retry_count: number;
+  last_error_at: string | null;
+  last_error: string | null;
 }
 
 export interface LinkContent {

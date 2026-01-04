@@ -124,10 +124,15 @@ create table if not exists links (
   created_at      timestamptz not null default now(),
   source          text null,
 
-  status          text not null default 'new',      -- new|fetched|enriched|published|failed
+  status          text not null default 'new',      -- new|fetched|enriched|published|error
   visibility      text not null default 'private',  -- private|public
 
-  pinned          boolean not null default false
+  pinned          boolean not null default false,
+
+  -- Retry tracking for failed links
+  retry_count     int not null default 0,
+  last_error_at   timestamptz null,
+  last_error      text null              -- human-readable error message
 );
 
 create unique index if not exists links_url_norm_uq on links(url_norm);

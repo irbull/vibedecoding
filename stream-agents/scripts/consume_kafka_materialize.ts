@@ -2,9 +2,13 @@
  * Kafka → DB Materializer
  *
  * Consumes events from the `events.raw` Kafka topic and materializes them
- * into Postgres state tables. Implements idempotent processing via:
- * - event_ingest_dedupe table (prevents duplicate processing)
- * - kafka_offsets table (tracks consumer progress)
+ * into Postgres state tables.
+ *
+ * OFFSET TRACKING: DB is the sole source of truth.
+ * - event_ingest_dedupe table tracks which Kafka offsets have been processed
+ * - We do NOT commit offsets to Kafka consumer groups
+ * - On startup, we seek to where DB says we left off
+ * - This ensures crash recovery works correctly with no dual-state issues
  *
  * Run with: bun run scripts/consume_kafka_materialize.ts
  */
@@ -119,15 +123,26 @@ async function handleContentFetched(event: LifestreamEvent): Promise<void> {
       fetch_error = EXCLUDED.fetch_error
   `;
 
-  // Update link status
-  const newStatus = fetch_error ? 'error' : 'fetched';
-  await sql`
-    UPDATE lifestream.links
-    SET status = ${newStatus}
-    WHERE subject_id = ${event.subject_id} AND status = 'new'
-  `;
-
-  console.log(`  [content.fetched] Updated: ${event.subject_id} -> ${newStatus}`);
+  // Update link status (and retry tracking on error)
+  if (fetch_error) {
+    await sql`
+      UPDATE lifestream.links
+      SET status = 'error',
+          retry_count = retry_count + 1,
+          last_error_at = now(),
+          last_error = ${fetch_error}
+      WHERE subject_id = ${event.subject_id}
+    `;
+    console.log(`  [content.fetched] Error: ${event.subject_id} -> error (retry_count incremented)`);
+  } else {
+    await sql`
+      UPDATE lifestream.links
+      SET status = 'fetched',
+          last_error = null
+      WHERE subject_id = ${event.subject_id} AND status = 'new'
+    `;
+    console.log(`  [content.fetched] Updated: ${event.subject_id} -> fetched`);
+  }
 }
 
 async function handleEnrichmentCompleted(event: LifestreamEvent): Promise<void> {
@@ -486,7 +501,11 @@ async function main(): Promise<void> {
 
       await consumer.subscribe({ topic: TOPIC, fromBeginning: true });
 
-      // Use manual commits to keep Kafka and our DB in sync
+      // DB is the sole source of truth for offset tracking.
+      // We don't commit offsets to Kafka - instead we:
+      // 1. Seek to where DB says we left off
+      // 2. Process messages and record to DB
+      // 3. On restart, DB tells us where to resume
       await consumer.run({
         autoCommit: false,
         eachMessage: async (payload) => {
@@ -504,12 +523,8 @@ async function main(): Promise<void> {
           }
 
           await handleMessage(payload);
-          // Commit offset after successful processing
-          await consumer!.commitOffsets([{
-            topic: payload.topic,
-            partition: payload.partition,
-            offset: (BigInt(payload.message.offset) + 1n).toString()
-          }]);
+          // NO commitOffsets() - DB is the sole source of truth
+          // The offset is recorded in event_ingest_dedupe by handleMessage()
         }
       });
 
