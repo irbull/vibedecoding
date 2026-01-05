@@ -9,19 +9,19 @@ canonicalUrl: "https://vibedecoding.io/guide/vibe-decoding"
 
 import Callout from '../../components/Callout.astro';
 
-Every day, we generate a continuous stream of signals—bookmarks saved, notes taken, articles read, conversations had, ideas sparked. Most of these signals disappear into the noise, never to resurface when they'd be most useful.
+Every day, we generate a continuous stream of signals: bookmarks saved, notes taken, articles read, conversations had, ideas sparked. Most of these signals disappear into the noise, never to resurface when they'd be most useful.
 
 **Vibe Decoding** is a reference architecture for building your own personal signal processing system.
 
 <Callout type="pattern">
-This is a reference architecture—a starting point you can adapt for your own inputs, outputs, and private streams.
+This is a reference architecture, a starting point you can adapt for your own inputs, outputs, and private streams.
 </Callout>
 
 ## The Problem
 
 We're surrounded by information, but starved for insight. The bookmark you saved six months ago that's suddenly relevant. The connection between two ideas you had weeks apart. The pattern in your interests that you've never noticed.
 
-These signals exist. They're scattered across apps, notes, and memory. The challenge isn't capturing them—we're already doing that, perhaps too well. The challenge is *decoding* them: extracting meaning, surfacing connections, and triggering action at the right moment.
+These signals exist. They're scattered across apps, notes, and memory. The challenge isn't capturing them (we're already doing that, perhaps too well). The challenge is *decoding* them: extracting meaning, surfacing connections, and triggering action at the right moment.
 
 <Callout type="principle">
 Information becomes valuable not when it's stored, but when it resurfaces at the moment of relevance.
@@ -29,14 +29,14 @@ Information becomes valuable not when it's stored, but when it resurfaces at the
 
 ## The Life Stream
 
-At the heart of Vibe Decoding is the concept of a **life stream**—a unified event log of your digital (and eventually physical) interactions. Every link saved, every note written, every highlight captured becomes an event in this stream.
+At the heart of Vibe Decoding is the concept of a **life stream**: a unified event log of your digital (and eventually physical) interactions. Every link saved, every note written, every highlight captured becomes an event in this stream.
 
 But a stream of raw events isn't enough. What makes Vibe Decoding powerful is what happens next:
 
-1. **Events are enriched** — Agents process each event, extracting entities, themes, and connections
-2. **Context is built** — Over time, the system learns your interests, projects, and patterns
-3. **Insights surface** — When new information arrives, it's connected to what you already know
-4. **Action is triggered** — The right information appears at the right time
+1. **Events are enriched** - Agents process each event, extracting entities, themes, and connections
+2. **Context is built** - Over time, the system learns your interests, projects, and patterns
+3. **Insights surface** - When new information arrives, it's connected to what you already know
+4. **Action is triggered** - The right information appears at the right time
 
 <Callout type="pattern">
 Events → Enrichment → Context → Insight → Action
@@ -44,12 +44,12 @@ Events → Enrichment → Context → Insight → Action
 
 ## The Tech Stack
 
-This isn't just philosophy—it's a working system. The current implementation uses:
+This isn't just philosophy, it's a working system. The current implementation uses:
 
 - **Kafka** for event streaming and durable message storage
 - **AI Agents** (powered by Claude) for enrichment and analysis
 - **Supabase** for structured storage and querying
-- **Flink** (coming soon) for real-time stream processing
+- **Flink** for real-time stream processing
 
 ```typescript
 // A simplified event in the life stream
@@ -74,6 +74,7 @@ This series will walk through building a complete Vibe Decoding system, from con
 - **Part 3**: Kafka patterns for personal streams
 - **Part 4**: Real-time processing with Flink
 - **Part 5**: Voice notes and context triggers
+- **Part 6**: Extending the system
 
 <Callout type="tradeoff">
 We're building a personal system, not a product. That means we can optimize for insight over scale, and for personal context over generic recommendations.

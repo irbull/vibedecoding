@@ -9,11 +9,11 @@ canonicalUrl: "https://vibedecoding.io/guide/extending-system"
 
 import Callout from '../../components/Callout.astro';
 
-Your life stream has been learning about you—capturing links, enriching them with tags, transcribing voice notes. But so far, it's been a one-way street. Information flows in, gets processed, sits in a database.
+Your life stream has been learning about you: capturing links, enriching them with tags, transcribing voice notes. But so far, it's been a one-way street. Information flows in, gets processed, sits in a database.
 
 What if the system could also *act* on the world?
 
-This is where extending the system gets interesting. Adding a new source isn't just about ingesting another data type. It's about completing the loop—letting the life stream both read from and write to the systems you already use.
+This is where extending the system gets interesting. Adding a new source isn't just about ingesting another data type. It's about completing the loop: letting the life stream both read from and write to the systems you already use.
 
 ## The Bidirectional Pattern
 
@@ -48,7 +48,7 @@ Most systems only do the first. The life stream can do both.
 ```
 
 <Callout type="principle">
-The best integrations complete a loop. The system doesn't just consume—it participates.
+The best integrations complete a loop. The system doesn't just consume, it participates.
 </Callout>
 
 ## The Extension Pattern
@@ -66,7 +66,7 @@ Before diving into calendar specifics, let's review the pattern for adding any n
 Schema → Subject IDs → Event Types → Agents → Materializer
 </Callout>
 
-This modularity is what makes the system extensible. Each piece is independent. You can add a new domain without touching existing code—just define your schema, emit events in the right format, and add materializer handlers.
+This modularity is what makes the system extensible. Each piece is independent. You can add a new domain without touching existing code: just define your schema, emit events in the right format, and add materializer handlers.
 
 ## Direction 1: Ingesting Calendar Events
 
@@ -114,7 +114,7 @@ The schema mirrors what we've done elsewhere: a main state table for the entity,
 
 ### Subject ID Strategy
 
-Subject IDs must be deterministic—the same calendar event should always produce the same ID, even if synced multiple times. For calendar events, we combine the calendar ID and event ID:
+Subject IDs must be deterministic: the same calendar event should always produce the same ID, even if synced multiple times. For calendar events, we combine the calendar ID and event ID:
 
 ```typescript
 // From: stream-agents/src/lib/subject_id.ts
@@ -141,8 +141,8 @@ The `gcal:` prefix indicates Google Calendar. If you later add Apple Calendar or
 
 Calendar sync introduces two new event types:
 
-- `calendar.event_synced` — A calendar event was imported/updated
-- `calendar.event_enriched` — Tags and metadata were added by an enricher
+- `calendar.event_synced` - A calendar event was imported/updated
+- `calendar.event_enriched` - Tags and metadata were added by an enricher
 
 ```typescript
 // calendar.event_synced payload
@@ -228,7 +228,7 @@ async function main(): Promise<void> {
 ```
 
 <Callout type="tradeoff">
-Polling vs. webhooks. Polling is simpler but introduces latency. Google Calendar supports push notifications via webhooks, which would give real-time sync—but requires a publicly accessible endpoint. Start with polling; add webhooks when latency matters.
+Polling vs. webhooks. Polling is simpler but introduces latency. Google Calendar supports push notifications via webhooks, which would give real-time sync, but requires a publicly accessible endpoint. Start with polling; add webhooks when latency matters.
 </Callout>
 
 ### Materializer Handler
@@ -479,7 +479,7 @@ When the calendar enricher runs, it can:
 3. Add new tags when needed
 4. The materializer stores them in `calendar_event_metadata.tags`
 
-Now queries can span domains: "Show me links, voice notes, and meetings related to `kubernetes`." The architecture already supports this—you just need to run the queries.
+Now queries can span domains: "Show me links, voice notes, and meetings related to `kubernetes`." The architecture already supports this, you just need to run the queries.
 
 ## What Makes This Extensible
 
@@ -491,13 +491,13 @@ The patterns we've established make adding new sources straightforward:
 4. **Agent independence**: New agents don't affect existing ones
 5. **Tag catalog sharing**: Semantic consistency across all domains
 
-The calendar integration we've sketched here—syncing events in, publishing todos out—follows exactly the patterns used for links and voice notes. The code structure is familiar. The debugging tools work the same way. The replay semantics are identical.
+The calendar integration we've sketched here (syncing events in, publishing todos out) follows exactly the patterns used for links and voice notes. The code structure is familiar. The debugging tools work the same way. The replay semantics are identical.
 
 That's the payoff of investing in a consistent architecture. Each new domain is a straightforward addition, not a new system to understand.
 
 ---
 
-Extending the system isn't about writing more code—it's about fitting new sources into existing patterns. Calendar is just one example. RSS feeds, GitHub activity, reading lists, health data from wearables—they all follow the same flow: schema, subject IDs, events, materializer, optional agents.
+Extending the system isn't about writing more code, it's about fitting new sources into existing patterns. Calendar is just one example. RSS feeds, GitHub activity, reading lists, health data from wearables: they all follow the same flow (schema, subject IDs, events, materializer, optional agents).
 
 The life stream grows with you. Add the sources that matter to your workflow. Connect them through tags and context. Let the system participate in your digital life, not just observe it.
 

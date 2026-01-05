@@ -9,13 +9,13 @@ canonicalUrl: "https://vibedecoding.io/guide/life-stream-architecture"
 
 import Callout from '../../components/Callout.astro';
 
-In [Part 0](/guide/vibe-decoding), we introduced the concept of a life stream—a unified event log of your digital interactions. Now it's time to get concrete. How do we actually model these events? What makes a good event schema? And how do we ensure that the same link saved twice doesn't create duplicate chaos?
+In [Part 0](/guide/vibe-decoding), we introduced the concept of a life stream: a unified event log of your digital interactions. Now it's time to get concrete. How do we actually model these events? What makes a good event schema? And how do we ensure that the same link saved twice doesn't create duplicate chaos?
 
 This is the foundation everything else builds on. Get the event model right, and the rest flows naturally. Get it wrong, and you'll be fighting your own architecture forever.
 
 ## What is a Life Stream?
 
-A life stream is an append-only log of everything that happens in your digital life. Every link saved, every note created, every temperature reading from your smart home—each becomes an immutable event in the stream.
+A life stream is an append-only log of everything that happens in your digital life. Every link saved, every note created, every temperature reading from your smart home: each becomes an immutable event in the stream.
 
 But here's the key insight: we're not storing *state*. We're storing *facts about what happened*.
 
@@ -86,7 +86,7 @@ Agents emit events just like any other source. When the fetcher agent successful
 
 ### Subject and Subject ID: What It's About
 
-Every event is about *something*—a link, a todo, a sensor reading. We capture this with two fields:
+Every event is about *something*: a link, a todo, a sensor reading. We capture this with two fields:
 
 - **`subject`**: The type of entity (e.g., `"link"`, `"todo.item"`, `"home.temperature"`)
 - **`subject_id`**: A stable, unique identifier for that specific entity
@@ -168,7 +168,7 @@ The format is always `{type}:{identifier}`. The type prefix makes it immediately
 
 ### URL Normalization
 
-For links, the natural key is the URL. But URLs are tricky—the same page can be referenced many different ways:
+For links, the natural key is the URL. But URLs are tricky. The same page can be referenced many different ways:
 
 - `https://Example.COM/page`
 - `https://example.com/page/`
@@ -396,7 +396,7 @@ export interface Subject {
 }
 ```
 
-The `visibility` field is particularly useful—it powers the public-facing site by filtering to only show `public` subjects.
+The `visibility` field is particularly useful. It powers the public-facing site by filtering to only show `public` subjects.
 
 ## Event Types Catalog
 
@@ -429,7 +429,7 @@ Each step produces a new event rather than mutating state. The materializer (cov
 
 ## Idempotency: Why It Matters
 
-In distributed systems, messages can be delivered more than once. Network hiccups, consumer restarts, Kafka rebalances—duplicates happen. Your system needs to handle them gracefully.
+In distributed systems, messages can be delivered more than once. Network hiccups, consumer restarts, Kafka rebalances: duplicates happen. Your system needs to handle them gracefully.
 
 <Callout type="principle">
 Every operation should be safe to retry. If you process the same event twice, the result should be identical.
@@ -578,7 +578,7 @@ All of this happens in seconds, and every step is recorded as an immutable event
 
 ## What's Next
 
-We've established the event model—the foundation everything builds on. In [Part 2: Agents and Enrichment Loops](/guide/agent-architecture), we'll dive into the agents themselves: how they consume events, call LLMs, and maintain state through Kafka-native patterns.
+We've established the event model, the foundation everything builds on. In [Part 2: Agents and Enrichment Loops](/guide/agent-architecture), we'll dive into the agents themselves: how they consume events, call LLMs, and maintain state through Kafka-native patterns.
 
 The fetcher and enricher agents we glimpsed here are just the beginning. The real power comes from composing agents into pipelines that transform raw signals into actionable insights.
 

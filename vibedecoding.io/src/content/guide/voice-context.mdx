@@ -11,11 +11,11 @@ import Callout from '../../components/Callout.astro';
 
 So far, we've built a life stream that captures links, notes, and digital interactions. But our lives aren't purely digital. The insight you need might come from a voice memo recorded during a walk, a temperature sensor in your office, or the simple fact that it's Monday morning and you're at your desk.
 
-This part explores how to extend the life stream beyond text input—into voice, sensors, and contextual triggers that make the system aware of *when* and *where* you are, not just *what* you're consuming.
+This part explores how to extend the life stream beyond text input: into voice, sensors, and contextual triggers that make the system aware of *when* and *where* you are, not just *what* you're consuming.
 
 ## Beyond Text: Voice as Life Stream Input
 
-Text is great for structured thought. But some of our best ideas arrive when we're away from the keyboard—walking, driving, or falling asleep. Voice capture turns these fleeting thoughts into first-class events in your life stream.
+Text is great for structured thought. But some of our best ideas arrive when we're away from the keyboard: walking, driving, or falling asleep. Voice capture turns these fleeting thoughts into first-class events in your life stream.
 
 <Callout type="principle">
 Context makes information timely.
@@ -57,7 +57,7 @@ The key insight: we capture context *at recording time*, not after. By the time 
 
 ## The Transcription Pipeline
 
-Raw audio isn't queryable. To make voice notes useful in the life stream, we need to transcribe them—and Whisper has made this remarkably accessible.
+Raw audio isn't queryable. To make voice notes useful in the life stream, we need to transcribe them, and Whisper has made this remarkably accessible.
 
 The pipeline looks like this:
 
@@ -108,7 +108,7 @@ Voice is just one dimension of context. The life stream becomes dramatically mor
 - **When it is**: Morning routine, deep work hours, wind-down time
 - **What you're doing**: Walking, coding, in a meeting
 
-These aren't just metadata—they're triggers. The system can surface different insights based on context:
+These aren't just metadata, they're triggers. The system can surface different insights based on context:
 
 ```typescript
 // Context-aware surfacing
@@ -135,11 +135,11 @@ async function surfaceRelevant(context: ContextQuery): Promise<Insight[]> {
 Privacy vs. context richness. More context enables better insights, but requires collecting more personal data. Start minimal and add context types only when they prove valuable.
 </Callout>
 
-The key is that context is captured as events, not inferred after the fact. Your phone knows you started a walk at 7:30am—emit a `context.activity_started` event. Your calendar knows you're in focus time—that's an event too. The life stream becomes a unified log of both content *and* context.
+The key is that context is captured as events, not inferred after the fact. Your phone knows you started a walk at 7:30am: emit a `context.activity_started` event. Your calendar knows you're in focus time: that's an event too. The life stream becomes a unified log of both content *and* context.
 
 ## Sensor Integration: Beyond Digital Events
 
-The life stream isn't limited to digital signals. Physical sensors can emit events too—and the existing architecture handles them seamlessly.
+The life stream isn't limited to digital signals. Physical sensors can emit events too, and the existing architecture handles them seamlessly.
 
 Let's look at a real example: temperature sensors. The system already supports sensor data as first-class events:
 
@@ -240,7 +240,7 @@ Why does temperature matter for a personal knowledge system? Context. When you r
 
 ## Future: Wearables & Ambient Data
 
-Today's implementation handles explicit inputs: links you save, notes you write, voice memos you record. But the next frontier is ambient data—signals captured passively that enrich context without demanding attention.
+Today's implementation handles explicit inputs: links you save, notes you write, voice memos you record. But the next frontier is ambient data: signals captured passively that enrich context without demanding attention.
 
 **Wearables open new possibilities:**
 
@@ -291,7 +291,7 @@ With great context comes great responsibility. A few principles for building the
 
 4. **No external sharing**: This is a personal system. Data stays in your infrastructure, enriched by your agents, for your insight.
 
-The goal isn't surveillance—it's awareness. The system should help you understand your own patterns, not create a comprehensive record for others to analyze.
+The goal isn't surveillance, it's awareness. The system should help you understand your own patterns, not create a comprehensive record for others to analyze.
 
 ## Connecting It All
 
@@ -308,7 +308,7 @@ No single event is magical. The magic is in the connections that emerge when all
 
 ---
 
-Voice and context extend the life stream from a record of what you consume to a richer picture of how you think. The technical patterns are straightforward—just more event types, more handlers, more agents. The challenge is choosing which context to capture and how to surface it without overwhelming.
+Voice and context extend the life stream from a record of what you consume to a richer picture of how you think. The technical patterns are straightforward: just more event types, more handlers, more agents. The challenge is choosing which context to capture and how to surface it without overwhelming.
 
 For the next part of the series, we'll look at the other end of the pipeline: how insights actually surface at the right moment, and the notification patterns that make a life stream useful rather than noisy.
 

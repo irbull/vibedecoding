@@ -9,7 +9,7 @@ canonicalUrl: "https://vibedecoding.io/guide/flink-time"
 
 import Callout from '../../components/Callout.astro';
 
-So far in this series, we've built a system that captures events, enriches them with AI agents, and moves them through Kafka topics. Each event is processed individually—a link arrives, gets fetched, gets summarized, gets stored.
+So far in this series, we've built a system that captures events, enriches them with AI agents, and moves them through Kafka topics. Each event is processed individually: a link arrives, gets fetched, gets summarized, gets stored.
 
 But here's the thing: the most interesting insights don't live in single events. They live in the *spaces between* events. The pattern of what you've been reading this week. The cluster of related topics you've been exploring. The sudden spike in activity around a particular project.
 
@@ -35,17 +35,17 @@ This works great for enrichment. But what if we want to answer questions like:
 - "Are there clusters of related links I've saved recently?"
 - "Has my reading pattern changed this month compared to last?"
 
-These questions require *temporal context*—the ability to look at events not in isolation, but as part of a flowing stream with a sense of time.
+These questions require *temporal context*: the ability to look at events not in isolation, but as part of a flowing stream with a sense of time.
 
 <Callout type="principle">
-Stream processing transforms "what happened" into "what's happening"—shifting from past tense to present continuous.
+Stream processing transforms "what happened" into "what's happening", shifting from past tense to present continuous.
 </Callout>
 
 This is where Apache Flink enters the picture. Flink is a stream processing framework that treats time as a first-class citizen. It can window events, detect patterns across time, and maintain state as data flows through.
 
 ## Time Windows
 
-The fundamental building block of temporal analysis is the **window**—a bounded slice of the infinite stream. Flink supports several window types, each suited to different questions.
+The fundamental building block of temporal analysis is the **window**: a bounded slice of the infinite stream. Flink supports several window types, each suited to different questions.
 
 ### Tumbling Windows
 
@@ -94,7 +94,7 @@ Window 3:         |----------24h----------|
 
 ### Session Windows
 
-Session windows are perhaps the most interesting for personal streams. They group events by *activity gaps*—events close together form a session, and a period of inactivity closes it.
+Session windows are perhaps the most interesting for personal streams. They group events by *activity gaps*: events close together form a session, and a period of inactivity closes it.
 
 ```java
 // Conceptual Flink: detect research sessions
@@ -105,10 +105,10 @@ links
   .addSink(new SessionStore());
 ```
 
-Use case: "What did my research session look like this afternoon?" If you save five links in quick succession, then nothing for an hour, that's one session—likely representing a focused burst of exploration on a topic.
+Use case: "What did my research session look like this afternoon?" If you save five links in quick succession, then nothing for an hour, that's one session, likely representing a focused burst of exploration on a topic.
 
 <Callout type="pattern">
-Session windows align with human behavior patterns—bursts of activity followed by breaks. They're ideal for understanding *intent* rather than just *activity*.
+Session windows align with human behavior patterns: bursts of activity followed by breaks. They're ideal for understanding *intent* rather than just *activity*.
 </Callout>
 
 ## Pattern Detection
@@ -198,7 +198,7 @@ temperatureStream
   .addSink(new AlertChannel());
 ```
 
-Beyond simple thresholds, we can detect *patterns*: "The living room temperature has been climbing for three hours straight"—which might indicate a stuck thermostat or an open window.
+Beyond simple thresholds, we can detect *patterns*: "The living room temperature has been climbing for three hours straight", which might indicate a stuck thermostat or an open window.
 
 ### Topic Clustering Over Time
 
@@ -262,7 +262,7 @@ Where does Flink fit in our existing system? Here's how the pieces connect:
                     └─────────────┘
 ```
 
-Flink doesn't replace our agents—it complements them. Agents handle per-event intelligence (summarization, entity extraction). Flink handles cross-event intelligence (patterns, trends, correlations).
+Flink doesn't replace our agents, it complements them. Agents handle per-event intelligence (summarization, entity extraction). Flink handles cross-event intelligence (patterns, trends, correlations).
 
 <Callout type="pattern">
 Agents answer "What is this?" Flink answers "What does this mean in context?"
@@ -281,7 +281,7 @@ For Vibe Decoding, we almost always want event time. If you saved a link at 3pm 
 
 ### Watermarks and Late Data
 
-Real-world streams are messy. Events arrive late, out of order, or not at all. Flink handles this with *watermarks*—markers that say "we believe we've seen all events up to this time."
+Real-world streams are messy. Events arrive late, out of order, or not at all. Flink handles this with *watermarks*: markers that say "we believe we've seen all events up to this time."
 
 For a personal system, we can be relatively lenient:
 
@@ -294,7 +294,7 @@ WatermarkStrategy
   );
 ```
 
-Late data isn't lost—it just might miss its intended window. For historical analysis, we can always reprocess.
+Late data isn't lost, it just might miss its intended window. For historical analysis, we can always reprocess.
 
 ## What's Coming
 
@@ -304,10 +304,10 @@ This guide is intentionally conceptual. Flink integration is still in developmen
 
 When we implement Flink, we'll add:
 
-1. **Weekly Digest Pipeline** — Automated summaries of reading patterns
-2. **Real-time Trend Detection** — Alerts when topics spike in your stream
-3. **Session Reconstruction** — Grouping related research into coherent sessions
-4. **Cross-Stream Joins** — Correlating different event types for richer context
+1. **Weekly Digest Pipeline** - Automated summaries of reading patterns
+2. **Real-time Trend Detection** - Alerts when topics spike in your stream
+3. **Session Reconstruction** - Grouping related research into coherent sessions
+4. **Cross-Stream Joins** - Correlating different event types for richer context
 
 The key insight is that Flink transforms our event store from a log into a living, temporal data structure. Events stop being isolated facts and start forming narratives.
 
@@ -317,4 +317,4 @@ Stream processing is where Vibe Decoding moves from "capturing signals" to "unde
 
 Flink ties it all together with the dimension we've been missing: **time**.
 
-Ready to continue? [Part 5](/guide/voice-context) explores voice notes and context triggers—how we capture and surface insights through natural conversation (coming soon).
+Ready to continue? [Part 5](/guide/voice-context) explores voice notes and context triggers: how we capture and surface insights through natural conversation (coming soon).

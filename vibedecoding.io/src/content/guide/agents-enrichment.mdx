@@ -9,7 +9,7 @@ canonicalUrl: "https://vibedecoding.io/guide/agents-enrichment"
 
 import Callout from '../../components/Callout.astro';
 
-In [Part 0](/guide/vibe-decoding), we introduced the concept of a life stream—a unified event log of your digital interactions. But raw events are just data. The magic happens when we transform them into something meaningful.
+In [Part 0](/guide/vibe-decoding), we introduced the concept of a life stream: a unified event log of your digital interactions. But raw events are just data. The magic happens when we transform them into something meaningful.
 
 This is where **agents** come in.
 
@@ -83,7 +83,7 @@ async function handleMessage({ topic, partition, message }: EachMessagePayload):
 }
 ```
 
-The fetcher uses [Mozilla Readability](https://github.com/mozilla/readability)—the same library that powers Firefox's Reader View—to extract the main content from web pages. This strips away navigation, ads, and other noise, leaving just the article text.
+The fetcher uses [Mozilla Readability](https://github.com/mozilla/readability), the same library that powers Firefox's Reader View, to extract the main content from web pages. This strips away navigation, ads, and other noise, leaving just the article text.
 
 ```typescript
 // From: stream-agents/scripts/agent_fetcher.ts
@@ -148,7 +148,7 @@ Notice a few important details:
 
 - **Rate limiting per domain**: We track the last fetch time for each domain and wait at least 1 second between requests to the same host. This keeps us from hammering servers.
 - **Timeout handling**: Network requests can hang. We use an AbortController with a 30-second timeout.
-- **Error tracking**: When extraction fails, we still emit an event—but with the error recorded. This lets downstream systems know what happened without blocking the pipeline.
+- **Error tracking**: When extraction fails, we still emit an event, but with the error recorded. This lets downstream systems know what happened without blocking the pipeline.
 
 ## The Enricher Agent
 
@@ -214,12 +214,12 @@ Respond ONLY with valid JSON in this exact format:
 ```
 
 <Callout type="tradeoff">
-LLM calls are expensive. We truncate content to ~32K characters (roughly 8K tokens) to control costs. For most articles, this captures the key information. For very long documents, you might miss nuance in the conclusion—but the cost savings are significant when processing thousands of links.
+LLM calls are expensive. We truncate content to ~32K characters (roughly 8K tokens) to control costs. For most articles, this captures the key information. For very long documents, you might miss nuance in the conclusion, but the cost savings are significant when processing thousands of links.
 </Callout>
 
 The enricher uses `gpt-4o-mini` with a low temperature (0.3) for consistent, deterministic outputs. We also use JSON mode (`response_format: { type: 'json_object' }`) to ensure we get structured data back.
 
-Any LLM with structured output works here—Claude, local models via Ollama, or other providers. The key is consistent JSON responses.
+Any LLM with structured output works here: Claude, local models via Ollama, or other providers. The key is consistent JSON responses.
 
 ## The Materializer
 
@@ -303,7 +303,7 @@ async function handleEnrichmentCompleted(event: LifestreamEvent): Promise<void> 
 }
 ```
 
-The materializer uses `ON CONFLICT ... DO UPDATE` (upserts) extensively. This means events can be replayed safely—the same event processed twice will produce the same result.
+The materializer uses `ON CONFLICT ... DO UPDATE` (upserts) extensively. This means events can be replayed safely: the same event processed twice will produce the same result.
 
 ## Agent Idempotency
 
@@ -344,7 +344,7 @@ async function alreadyEnriched(subjectId: string): Promise<boolean> {
 }
 ```
 
-Notice the enricher's check is slightly more sophisticated—it not only checks if a record exists, but whether it has actual tags. This handles the case where a previous enrichment attempt failed partway through.
+Notice the enricher's check is slightly more sophisticated: it not only checks if a record exists, but whether it has actual tags. This handles the case where a previous enrichment attempt failed partway through.
 
 The materializer also implements idempotency at the Kafka level, tracking which offsets have been processed:
 
@@ -370,7 +370,7 @@ Here's a problem: when the enricher generates tags, we want consistency. If one 
 
 But how does the enricher know what tags already exist? It could query the database, but that adds latency and couples the agent to the materializer's schema.
 
-The solution is a **KTable**—a Kafka-native pattern for maintaining stateful lookups.
+The solution is a **KTable**, a Kafka-native pattern for maintaining stateful lookups.
 
 <Callout type="pattern">
 **KTable pattern**: Use a compacted Kafka topic as a distributed key-value store. Consumers subscribe to the topic to build a local cache of the current state.
@@ -470,7 +470,7 @@ link.added ──► Fetcher ──► content.fetched ──► Enricher ──
 
 ## What's Next
 
-We've built the core enrichment pipeline: fetching content, calling LLMs for analysis, and projecting events into queryable state. In [Part 3](/guide/kafka-patterns), we'll dive deeper into Kafka patterns for personal streams—topics, partitions, consumer groups, and the tradeoffs involved.
+We've built the core enrichment pipeline: fetching content, calling LLMs for analysis, and projecting events into queryable state. In [Part 3](/guide/kafka-patterns), we'll dive deeper into Kafka patterns for personal streams: topics, partitions, consumer groups, and the tradeoffs involved.
 
 But first, try running the agents yourself. Save a few links and watch them flow through the pipeline. There's something satisfying about seeing an article transform from a bare URL into a tagged, summarized knowledge artifact.
 

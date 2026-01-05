@@ -9,7 +9,7 @@ canonicalUrl: "https://vibedecoding.io/guide/kafka-patterns"
 
 import Callout from '../../components/Callout.astro';
 
-In [Part 0](/guide/vibe-decoding), we introduced the concept of a life stream—a unified event log of your digital interactions. But how do you actually transport those events reliably? How do you ensure that a saved bookmark at 2 AM doesn't disappear into the void before your enrichment agents wake up?
+In [Part 0](/guide/vibe-decoding), we introduced the concept of a life stream: a unified event log of your digital interactions. But how do you actually transport those events reliably? How do you ensure that a saved bookmark at 2 AM doesn't disappear into the void before your enrichment agents wake up?
 
 Enter Kafka.
 
@@ -17,11 +17,11 @@ Enter Kafka.
 
 You might wonder: why not just write events directly to Postgres and call it a day? For a simple system, that works fine. But as your life stream grows, you'll run into three problems:
 
-1. **Durability under failure** — What happens when your enrichment agent crashes mid-processing? With direct database writes, you're left guessing which events were handled.
+1. **Durability under failure** - What happens when your enrichment agent crashes mid-processing? With direct database writes, you're left guessing which events were handled.
 
-2. **Replay capability** — When you deploy a new agent or fix a bug, you want to reprocess historical events. Databases aren't designed for efficient sequential replay.
+2. **Replay capability** - When you deploy a new agent or fix a bug, you want to reprocess historical events. Databases aren't designed for efficient sequential replay.
 
-3. **Decoupled consumers** — Multiple agents need the same events. A fetcher agent grabs content, an enricher agent adds tags, a summarizer generates summaries. They shouldn't step on each other.
+3. **Decoupled consumers** - Multiple agents need the same events. A fetcher agent grabs content, an enricher agent adds tags, a summarizer generates summaries. They shouldn't step on each other.
 
 Kafka solves all three. Events are durably stored, can be replayed from any point, and multiple consumers can process the same stream independently.
 
@@ -31,7 +31,7 @@ Kafka is transport, Postgres is truth. Events flow through Kafka for durability 
 
 ### The Right Tool for the Job
 
-Kafka isn't always the answer. For a personal life stream with dozens of events per day, it might feel like overkill. But consider what you're building: a system designed to grow with you for years. The patterns you establish now—durable transport, checkpointed processing, consumer groups—will serve you well as your stream expands.
+Kafka isn't always the answer. For a personal life stream with dozens of events per day, it might feel like overkill. But consider what you're building: a system designed to grow with you for years. The patterns you establish now (durable transport, checkpointed processing, consumer groups) will serve you well as your stream expands.
 
 Plus, running a single-node Kafka cluster is surprisingly lightweight. We'll cover that setup later.
 
@@ -63,7 +63,7 @@ const TOPICS: TopicConfig[] = [
 
 ### events.raw
 
-This is the main event stream. Every `link.added`, `note.created`, and `content.fetched` event flows through here. Three partitions give us room for parallel processing—though for a personal stream, even one partition would suffice.
+This is the main event stream. Every `link.added`, `note.created`, and `content.fetched` event flows through here. Three partitions give us room for parallel processing (though for a personal stream, even one partition would suffice).
 
 The 7-day retention means events stick around long enough to replay if something goes wrong, but don't accumulate forever.
 
@@ -77,7 +77,7 @@ Use log compaction (`cleanup.policy: 'compact'`) for reference data that agents 
 
 ### Creating Topics
 
-Topic creation is idempotent—run it as many times as you want:
+Topic creation is idempotent. Run it as many times as you want:
 
 ```typescript
 // From: stream-agents/scripts/init_kafka.ts
@@ -208,10 +208,10 @@ while (true) {
 }
 ```
 
-Notice the order: send to Kafka first, then save the checkpoint. If we crash between these two operations, we'll resend some events on restart—but that's fine because our consumers are idempotent.
+Notice the order: send to Kafka first, then save the checkpoint. If we crash between these two operations, we'll resend some events on restart, but that's fine because our consumers are idempotent.
 
 <Callout type="tradeoff">
-We accept at-least-once delivery (possible duplicates) in exchange for simpler code. The alternative—distributed transactions—adds significant complexity for minimal benefit in a personal system.
+We accept at-least-once delivery (possible duplicates) in exchange for simpler code. The alternative (distributed transactions) adds significant complexity for minimal benefit in a personal system.
 </Callout>
 
 ## Consumer Groups
@@ -231,7 +231,7 @@ export const createConsumer = async (groupId: string): Promise<Consumer> => {
 
 ### The Fetcher Agent Pattern
 
-Here's how our fetcher agent—which downloads and parses article content—consumes events:
+Here's how our fetcher agent (which downloads and parses article content) consumes events:
 
 ```typescript
 // From: stream-agents/scripts/agent_fetcher.ts
@@ -349,7 +349,7 @@ KAFKA_SSL=true
 ```
 
 <Callout type="principle">
-Always use TLS when using SASL/PLAIN. The password is sent in cleartext over the wire—TLS encrypts the connection.
+Always use TLS when using SASL/PLAIN. The password is sent in cleartext over the wire. TLS encrypts the connection.
 </Callout>
 
 ### AWS IAM (for MSK)
@@ -440,13 +440,13 @@ Kafka listens on localhost:9092. nginx terminates TLS on port 9093 and proxies t
 
 ### Why This Setup?
 
-1. **TLS everywhere** — Your events flow over the public internet. Encryption is non-negotiable.
+1. **TLS everywhere** - Your events flow over the public internet. Encryption is non-negotiable.
 
-2. **SASL/PLAIN auth** — Simple but effective. Combined with TLS, it's secure enough for personal use.
+2. **SASL/PLAIN auth** - Simple but effective. Combined with TLS, it's secure enough for personal use.
 
-3. **KRaft mode** — Kafka 3.x+ can run without ZooKeeper, dramatically simplifying single-node deployments.
+3. **KRaft mode** - Kafka 3.x+ can run without ZooKeeper, dramatically simplifying single-node deployments.
 
-4. **Minimal cost** — A t3.small instance (~$15/month) handles a personal life stream easily.
+4. **Minimal cost** - A t3.small instance (~$15/month) handles a personal life stream easily.
 
 ### Terraform Deployment
 
