@@ -16,6 +16,6 @@ const seriesSlug = series.toLowerCase().replace(/\s+/g, '-');
   <span>{series}</span>
   <span class="text-stream-500">·</span>
   <span>
-    Part {part}{totalParts ? ` of ${totalParts}` : ''}
+    Part {part + 1}{totalParts ? ` of ${totalParts}` : ''}
   </span>
 </a>
