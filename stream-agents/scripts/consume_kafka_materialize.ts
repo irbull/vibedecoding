@@ -370,58 +370,65 @@ async function processEvent(event: LifestreamEvent): Promise<void> {
 // ============================================================
 
 /**
- * Calculate the target offset based on DB state and Kafka's available range.
- * Returns the offset we should start consuming from.
+ * Calculate the target offset for each partition based on DB state and Kafka's available range.
+ * Returns a Map of partition -> offset we should start consuming from.
  */
-async function calculateTargetOffset(): Promise<bigint> {
+async function calculateTargetOffsets(): Promise<Map<number, bigint>> {
   const kafka = getKafka();
   const admin = kafka.admin();
   await admin.connect();
 
   try {
-    // 1. Get our last processed offset from DB
-    const result = await sql`
-      SELECT MAX(kafka_offset) as last_offset
-      FROM lifestream.event_ingest_dedupe
-      WHERE topic = ${TOPIC} AND partition = 0
-    `;
-    const lastProcessedOffset = result[0]?.last_offset;
-    const desiredOffset = lastProcessedOffset !== null
-      ? BigInt(lastProcessedOffset) + 1n
-      : 0n;
-
-    // 2. Get Kafka's valid offset range for this partition
+    // Get partition info from Kafka
     const offsets = await admin.fetchTopicOffsets(TOPIC);
-    const partitionInfo = offsets.find(p => p.partition === 0);
-    const earliestOffset = BigInt(partitionInfo?.low ?? '0');
-    const latestOffset = BigInt(partitionInfo?.high ?? '0');
+    const targetOffsets = new Map<number, bigint>();
 
-    console.log(`[materializer] DB last processed: ${lastProcessedOffset ?? 'none'}`);
-    console.log(`[materializer] Kafka range: [${earliestOffset}, ${latestOffset})`);
+    console.log(`[materializer] Found ${offsets.length} partition(s) for topic ${TOPIC}`);
 
-    // 3. Clamp to valid range
-    let targetOffset = desiredOffset;
-    if (desiredOffset < earliestOffset) {
-      // Our desired offset was deleted by retention, start from earliest available
-      console.log(`[materializer] Desired offset ${desiredOffset} < earliest ${earliestOffset}, using earliest`);
-      targetOffset = earliestOffset;
-    } else if (desiredOffset > latestOffset) {
-      // Kafka was reset/recreated - our DB has stale offsets from the old Kafka
-      // Clear stale dedupe records so we can reprocess with new offsets
-      console.log(`[materializer] Desired offset ${desiredOffset} > latest ${latestOffset} - Kafka was reset`);
-      console.log(`[materializer] Clearing stale dedupe records for topic ${TOPIC}...`);
+    for (const partitionInfo of offsets) {
+      const partition = partitionInfo.partition;
+      const earliestOffset = BigInt(partitionInfo.low);
+      const latestOffset = BigInt(partitionInfo.high);
 
-      await sql`
-        DELETE FROM lifestream.event_ingest_dedupe
-        WHERE topic = ${TOPIC}
+      // Get last processed offset for THIS partition from DB
+      const result = await sql`
+        SELECT MAX(kafka_offset) as last_offset
+        FROM lifestream.event_ingest_dedupe
+        WHERE topic = ${TOPIC} AND partition = ${partition}
       `;
+      const lastProcessedOffset = result[0]?.last_offset;
+      const desiredOffset = lastProcessedOffset !== null
+        ? BigInt(lastProcessedOffset) + 1n
+        : 0n;
 
-      console.log(`[materializer] Starting from earliest offset (${earliestOffset})`);
-      targetOffset = earliestOffset;
+      console.log(`[materializer] Partition ${partition}: DB last=${lastProcessedOffset ?? 'none'}, Kafka range=[${earliestOffset}, ${latestOffset})`);
+
+      // Clamp to valid range
+      let targetOffset = desiredOffset;
+      if (desiredOffset < earliestOffset) {
+        // Our desired offset was deleted by retention, start from earliest available
+        console.log(`[materializer] Partition ${partition}: desired ${desiredOffset} < earliest ${earliestOffset}, using earliest`);
+        targetOffset = earliestOffset;
+      } else if (desiredOffset > latestOffset) {
+        // Kafka was reset/recreated - our DB has stale offsets from the old Kafka
+        // Clear stale dedupe records for this partition so we can reprocess with new offsets
+        console.log(`[materializer] Partition ${partition}: desired ${desiredOffset} > latest ${latestOffset} - Kafka was reset`);
+        console.log(`[materializer] Clearing stale dedupe records for partition ${partition}...`);
+
+        await sql`
+          DELETE FROM lifestream.event_ingest_dedupe
+          WHERE topic = ${TOPIC} AND partition = ${partition}
+        `;
+
+        console.log(`[materializer] Partition ${partition}: starting from earliest (${earliestOffset})`);
+        targetOffset = earliestOffset;
+      }
+
+      targetOffsets.set(partition, targetOffset);
+      console.log(`[materializer] Partition ${partition}: will start from offset ${targetOffset}`);
     }
 
-    console.log(`[materializer] Will start from offset: ${targetOffset}`);
-    return targetOffset;
+    return targetOffsets;
 
   } finally {
     await admin.disconnect();
@@ -491,9 +498,9 @@ async function main(): Promise<void> {
   console.log(`   Topic: ${TOPIC}`);
   console.log('   Press Ctrl+C to stop.\n');
 
-  // Calculate target offset based on DB state and Kafka's available range
-  const targetOffset = await calculateTargetOffset();
-  let hasSeekPerformed = false;
+  // Calculate target offsets for each partition based on DB state and Kafka's available range
+  const targetOffsets = await calculateTargetOffsets();
+  const seekedPartitions = new Set<number>();
 
   while (!isShuttingDown) {
     try {
@@ -503,23 +510,27 @@ async function main(): Promise<void> {
 
       // DB is the sole source of truth for offset tracking.
       // We don't commit offsets to Kafka - instead we:
-      // 1. Seek to where DB says we left off
+      // 1. Seek to where DB says we left off (per partition)
       // 2. Process messages and record to DB
       // 3. On restart, DB tells us where to resume
       await consumer.run({
         autoCommit: false,
         eachMessage: async (payload) => {
-          // Seek to our calculated target offset on first message
+          const partition = payload.partition;
+
+          // Seek to our calculated target offset on first message per partition
           // This handles Kafka reset scenarios where our DB offset is stale
-          if (!hasSeekPerformed) {
+          if (!seekedPartitions.has(partition)) {
             const currentOffset = BigInt(payload.message.offset);
+            const targetOffset = targetOffsets.get(partition) ?? 0n;
+
             if (currentOffset !== targetOffset) {
-              console.log(`[materializer] Seeking from ${currentOffset} to ${targetOffset}`);
-              consumer!.seek({ topic: TOPIC, partition: payload.partition, offset: targetOffset.toString() });
-              hasSeekPerformed = true;
+              console.log(`[materializer] Partition ${partition}: seeking from ${currentOffset} to ${targetOffset}`);
+              consumer!.seek({ topic: TOPIC, partition, offset: targetOffset.toString() });
+              seekedPartitions.add(partition);
               return; // Skip this message, we'll get the right one after seek
             }
-            hasSeekPerformed = true;
+            seekedPartitions.add(partition);
           }
 
           await handleMessage(payload);
