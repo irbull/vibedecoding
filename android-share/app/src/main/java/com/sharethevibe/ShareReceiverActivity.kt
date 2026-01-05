@@ -91,20 +91,18 @@ class ShareReceiverActivity : AppCompatActivity() {
 
     private fun shareUrl(url: String) {
         Log.d(TAG, "shareUrl called with: $url")
-        
-        // Get saved API key
-        val prefs = getSharedPreferences(MainActivity.PREFS_NAME, Context.MODE_PRIVATE)
-        val apiKey = prefs.getString(MainActivity.API_KEY_PREF, "") ?: ""
-        
-        // Use hardcoded Supabase URL
-        val apiUrl = MainActivity.SUPABASE_URL
 
-        Log.d(TAG, "Using Supabase URL: $apiUrl")
+        // Get saved settings
+        val prefs = getSharedPreferences(MainActivity.PREFS_NAME, Context.MODE_PRIVATE)
+        val apiUrl = prefs.getString(MainActivity.API_URL_PREF, "") ?: ""
+        val apiKey = prefs.getString(MainActivity.API_KEY_PREF, "") ?: ""
+
+        Log.d(TAG, "Using API URL: $apiUrl")
         Log.d(TAG, "API Key length: ${apiKey.length}")
 
-        if (apiKey.isEmpty()) {
-            Log.e(TAG, "API key is empty!")
-            showToastAndFinish("Please configure API key in Share the Vibe app first")
+        if (apiUrl.isEmpty() || apiKey.isEmpty()) {
+            Log.e(TAG, "API URL or key is empty!")
+            showToastAndFinish("Please configure settings in Share the Vibe app first")
             return
         }
 
@@ -117,7 +115,7 @@ class ShareReceiverActivity : AppCompatActivity() {
                 }
                 Log.d(TAG, "Final URL to save: $resolvedUrl")
                 
-                // Then post to Supabase
+                // Then post to Lifestream
                 val result = withContext(Dispatchers.IO) {
                     ApiService.postUrl(apiUrl, apiKey, resolvedUrl)
                 }
