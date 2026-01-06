@@ -82,7 +82,7 @@ bun run kafka:init
 ```
 
 #### 2. Start Publisher (Forwarder)
-Polls the database for new events and publishes them to Kafka. Uses `.checkpoint` to track progress.
+Polls the database for new events and publishes them to Kafka. Tracks publication status via `published_to_kafka` column on events table.
 ```bash
 bun run kafka:publish
 ```

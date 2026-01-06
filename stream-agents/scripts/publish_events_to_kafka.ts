@@ -1,46 +1,8 @@
 import { sql, closeDb } from '../src/lib/db';
 import { getProducer, disconnectKafka } from '../src/lib/kafka';
 
-const PUBLISHER_ID = 'default';
 const MAX_RETRIES = 5;
 const BASE_DELAY_MS = 1000;
-
-interface Checkpoint {
-  timestamp: Date | string;
-  id: string;
-}
-
-async function getCheckpoint(): Promise<Checkpoint> {
-  const result = await sql`
-    SELECT last_timestamp, last_event_id::text
-    FROM lifestream.publisher_checkpoint
-    WHERE publisher_id = ${PUBLISHER_ID}
-  `;
-
-  if (result.length > 0) {
-    return {
-      timestamp: result[0].last_timestamp,
-      id: result[0].last_event_id,
-    };
-  }
-
-  // No checkpoint exists yet - start from beginning
-  return {
-    timestamp: '1970-01-01T00:00:00.000Z',
-    id: '00000000-0000-0000-0000-000000000000',
-  };
-}
-
-async function saveCheckpoint(cp: Checkpoint): Promise<void> {
-  await sql`
-    INSERT INTO lifestream.publisher_checkpoint (publisher_id, last_timestamp, last_event_id)
-    VALUES (${PUBLISHER_ID}, ${cp.timestamp}, ${cp.id}::uuid)
-    ON CONFLICT (publisher_id) DO UPDATE SET
-      last_timestamp = EXCLUDED.last_timestamp,
-      last_event_id = EXCLUDED.last_event_id,
-      updated_at = now()
-  `;
-}
 
 async function main() {
   const producer = await getProducer();
@@ -52,21 +14,17 @@ async function main() {
 
   while (true) {
     try {
-      const cp = await getCheckpoint();
-
-      // Get events after checkpoint: use >= on timestamp and exclude the checkpoint ID
-      // This avoids JS Date millisecond precision loss issues with Postgres microseconds
+      // Query unpublished events
       const events = await sql`
         SELECT *
         FROM lifestream.events
-        WHERE received_at >= ${cp.timestamp}
-          AND id != ${cp.id}::uuid
-        ORDER BY received_at ASC, id ASC
+        WHERE published_to_kafka = false
+        ORDER BY received_at ASC
         LIMIT 50
       `;
 
       if (events.length > 0) {
-        console.log(`Found ${events.length} new events.`);
+        console.log(`Found ${events.length} unpublished events.`);
 
         const messages = events.map(e => ({
           key: e.subject_id,
@@ -82,14 +40,15 @@ async function main() {
           messages
         });
 
-        const lastEvent = events[events.length - 1];
-        const newCheckpoint = {
-          timestamp: lastEvent.received_at,
-          id: lastEvent.id as string
-        };
+        // Mark events as published
+        const eventIds = events.map(e => e.id);
+        await sql`
+          UPDATE lifestream.events
+          SET published_to_kafka = true
+          WHERE id = ANY(${eventIds}::uuid[])
+        `;
 
-        await saveCheckpoint(newCheckpoint);
-        console.log(`Published ${events.length} events. Checkpoint: ${newCheckpoint.id}`);
+        console.log(`Published ${events.length} events to Kafka.`);
       }
 
       // Reset error counter on success

@@ -38,11 +38,12 @@ async function debug() {
   `;
   console.log('\nLink content:', content.length > 0 ? content[0] : '(none)');
 
-  // Check publisher checkpoint
-  const checkpoint = await sql`
-    SELECT * FROM lifestream.publisher_checkpoint
+  // Check unpublished events count
+  const unpublished = await sql`
+    SELECT COUNT(*) as count FROM lifestream.events
+    WHERE published_to_kafka = false
   `;
-  console.log('\nPublisher checkpoint:', checkpoint[0] || '(none)');
+  console.log('\nUnpublished events:', unpublished[0].count);
 
   // Check materializer dedupe state
   const dedupe = await sql`

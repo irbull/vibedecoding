@@ -111,71 +111,60 @@ await admin.disconnect();
 
 Events originate in Postgres (from your iOS Shortcut, browser extension, or API calls), but they need to flow into Kafka for processing. The publisher is a simple forwarder that bridges these two worlds.
 
-The key challenge: **exactly-once semantics**. If the publisher crashes after sending to Kafka but before recording its progress, it might resend the same events on restart. We solve this with checkpointing.
+The key challenge: **at-least-once semantics**. If the publisher crashes after sending to Kafka but before recording its progress, it might resend the same events on restart. We solve this by tracking publication status directly on each event.
 
 <Callout type="pattern">
-Checkpoint after successful publish. Store the last processed event ID in Postgres, and query for events after that checkpoint on each run.
+Track publication status per-event. Add a `published_to_kafka` boolean column to the events table. Query unpublished events, send to Kafka, then mark as published. No events can be skipped even if the publisher stops and restarts.
 </Callout>
 
-### Checkpoint Storage
+### Why Not Timestamp-Based Checkpoints?
 
-```typescript
-// From: stream-agents/scripts/publish_events_to_kafka.ts
-interface Checkpoint {
-  timestamp: Date | string;
-  id: string;
-}
+An earlier version of this system used a checkpoint table storing the last published timestamp and event ID. This approach had a subtle but serious flaw: if the publisher stopped running and restarted later, events created during the downtime could be skipped if newer events were processed first.
 
-async function getCheckpoint(): Promise<Checkpoint> {
-  const result = await sql`
-    SELECT last_timestamp, last_event_id::text
-    FROM lifestream.publisher_checkpoint
-    WHERE publisher_id = ${PUBLISHER_ID}
-  `;
+The boolean column approach is more robust:
+- **No events skipped**: Every event starts with `published_to_kafka = false`
+- **Restart-safe**: The publisher picks up where it left off, regardless of timing
+- **Simple queries**: Just `WHERE published_to_kafka = false`
 
-  if (result.length > 0) {
-    return {
-      timestamp: result[0].last_timestamp,
-      id: result[0].last_event_id,
-    };
-  }
+The tradeoff is write amplification (an UPDATE after each INSERT), but for a personal system this is negligible.
 
-  // No checkpoint exists yet - start from beginning
-  return {
-    timestamp: '1970-01-01T00:00:00.000Z',
-    id: '00000000-0000-0000-0000-000000000000',
-  };
-}
+### Schema
 
-async function saveCheckpoint(cp: Checkpoint): Promise<void> {
-  await sql`
-    INSERT INTO lifestream.publisher_checkpoint
-      (publisher_id, last_timestamp, last_event_id)
-    VALUES (${PUBLISHER_ID}, ${cp.timestamp}, ${cp.id}::uuid)
-    ON CONFLICT (publisher_id) DO UPDATE SET
-      last_timestamp = EXCLUDED.last_timestamp,
-      last_event_id = EXCLUDED.last_event_id,
-      updated_at = now()
-  `;
-}
+```sql
+-- From: stream-agents/schema.sql
+CREATE TABLE IF NOT EXISTS events (
+  id              uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  occurred_at     timestamptz NOT NULL,
+  received_at     timestamptz NOT NULL DEFAULT now(),
+  source          text NOT NULL,
+  subject         text NOT NULL,
+  subject_id      text NOT NULL,
+  event_type      text NOT NULL,
+  payload         jsonb NOT NULL DEFAULT '{}'::jsonb,
+  -- ... other columns ...
+
+  -- Kafka publication tracking
+  published_to_kafka boolean NOT NULL DEFAULT false
+);
+
+-- Partial index for efficient queries
+CREATE INDEX IF NOT EXISTS events_unpublished_idx
+  ON events(received_at) WHERE published_to_kafka = false;
 ```
 
 ### The Publish Loop
 
-The publisher runs continuously, polling for new events:
+The publisher runs continuously, polling for unpublished events:
 
 ```typescript
 // From: stream-agents/scripts/publish_events_to_kafka.ts
 while (true) {
-  const cp = await getCheckpoint();
-
-  // Get events after checkpoint
+  // Query unpublished events
   const events = await sql`
     SELECT *
     FROM lifestream.events
-    WHERE received_at >= ${cp.timestamp}
-      AND id != ${cp.id}::uuid
-    ORDER BY received_at ASC, id ASC
+    WHERE published_to_kafka = false
+    ORDER BY received_at ASC
     LIMIT 50
   `;
 
@@ -194,24 +183,25 @@ while (true) {
       messages
     });
 
-    // Checkpoint AFTER successful publish
-    const lastEvent = events[events.length - 1];
-    await saveCheckpoint({
-      timestamp: lastEvent.received_at,
-      id: lastEvent.id
-    });
+    // Mark events as published
+    const eventIds = events.map(e => e.id);
+    await sql`
+      UPDATE lifestream.events
+      SET published_to_kafka = true
+      WHERE id = ANY(${eventIds}::uuid[])
+    `;
 
-    console.log(`Published ${events.length} events.`);
+    console.log(`Published ${events.length} events to Kafka.`);
   }
 
   await new Promise(r => setTimeout(r, 5000));
 }
 ```
 
-Notice the order: send to Kafka first, then save the checkpoint. If we crash between these two operations, we'll resend some events on restart, but that's fine because our consumers are idempotent.
+Notice the order: send to Kafka first, then mark as published. If we crash between these two operations, we'll resend some events on restart, but that's fine because our consumers are idempotent.
 
 <Callout type="tradeoff">
-We accept at-least-once delivery (possible duplicates) in exchange for simpler code. The alternative (distributed transactions) adds significant complexity for minimal benefit in a personal system.
+We accept at-least-once delivery (possible duplicates) in exchange for simpler code and guaranteed delivery. The alternative (distributed transactions) adds significant complexity for minimal benefit in a personal system.
 </Callout>
 
 ## Consumer Groups

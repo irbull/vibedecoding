@@ -56,7 +56,10 @@ create table if not exists events (
   -- Kafka lineage (optional)
   kafka_topic      text null,
   kafka_partition  int  null,
-  kafka_offset     bigint null
+  kafka_offset     bigint null,
+
+  -- Kafka publication tracking (for DB->Kafka forwarder)
+  published_to_kafka boolean not null default false
 );
 
 -- Fast timeline queries + per-entity queries
@@ -68,6 +71,10 @@ create index if not exists events_type_idx
 
 create index if not exists events_source_idx
   on events(source, occurred_at desc);
+
+-- Partial index for unpublished events (used by kafka:publish forwarder)
+create index if not exists events_unpublished_idx
+  on events(received_at) where published_to_kafka = false;
 
 -- Optional: payload GIN for ad-hoc searches (can be heavy; enable only if you need it)
 -- create index events_payload_gin on events using gin(payload);
@@ -95,13 +102,8 @@ create table if not exists kafka_offsets (
   primary key (consumer_group, topic, partition)
 );
 
--- Track publisher checkpoint (which events have been forwarded to Kafka)
-create table if not exists publisher_checkpoint (
-  publisher_id    text primary key default 'default',
-  last_timestamp  timestamptz not null,
-  last_event_id   uuid not null,
-  updated_at      timestamptz not null default now()
-);
+-- NOTE: publisher_checkpoint table has been removed.
+-- Events now track their Kafka publication status via the published_to_kafka column.
 
 -- Extra dedupe barrier for events:
 -- Ensures we never insert the same Kafka record twice even if offset tracking gets weird.

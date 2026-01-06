@@ -2,19 +2,17 @@
  * Reset Kafka Topic
  *
  * Deletes and recreates the events.raw topic to clear all messages.
- * Also clears the local checkpoint file and Kafka offset tracking tables.
+ * Also resets event publication status and Kafka offset tracking tables.
  *
  * Run with: bun run scripts/reset_kafka.ts
  */
 
 import { getKafka, disconnectKafka } from '../src/lib/kafka';
 import { sql, closeDb } from '../src/lib/db';
-import { unlink } from 'fs/promises';
 
 const TOPIC = 'events.raw';
 const NUM_PARTITIONS = 3;
 const REPLICATION_FACTOR = 1;
-const CHECKPOINT_FILE = '.checkpoint';
 
 async function main() {
   const kafka = getKafka();
@@ -57,13 +55,10 @@ async function main() {
 
   await admin.disconnect();
 
-  // 4. Clear local checkpoint file
-  try {
-    await unlink(CHECKPOINT_FILE);
-    console.log(`Deleted local checkpoint file '${CHECKPOINT_FILE}'.`);
-  } catch {
-    console.log(`No local checkpoint file to delete.`);
-  }
+  // 4. Reset event publication status (mark all events as unpublished for replay)
+  console.log('Resetting event publication status...');
+  const eventResult = await sql`UPDATE lifestream.events SET published_to_kafka = false`;
+  console.log(`  Reset published_to_kafka: ${eventResult.count} events marked as unpublished.`);
 
   // 5. Clear Kafka offset tracking tables in DB
   console.log('\nClearing Kafka bookkeeping tables in database...');
