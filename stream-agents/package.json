@@ -14,6 +14,7 @@
     "kafka:materialize": "bun run scripts/consume_kafka_materialize.ts",
     "agent:fetcher": "bun run scripts/agent_fetcher.ts",
     "agent:enricher": "bun run scripts/agent_enricher.ts",
+    "agent:publisher": "bun run scripts/agent_publisher.ts",
     "clean:link": "bun run scripts/clean_link.ts",
     "retry:failed": "bun run scripts/retry_failed_links.ts"
   },

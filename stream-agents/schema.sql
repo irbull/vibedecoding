@@ -125,7 +125,7 @@ create table if not exists links (
   source          text null,
 
   status          text not null default 'new',      -- new|fetched|enriched|published|error
-  visibility      text not null default 'private',  -- private|public
+  visibility      text not null default 'public',   -- private|public
 
   pinned          boolean not null default false,
 
