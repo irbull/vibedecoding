@@ -8,7 +8,7 @@ We use Terraform to manage the infrastructure. You can choose between **Amazon M
 
 ### Prerequisites
 - Terraform installed
-- AWS Credentials configured (profile `irbull-msk`)
+- AWS Credentials configured
 
 ---
 
