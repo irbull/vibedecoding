@@ -20,7 +20,6 @@ We use Terraform to manage the infrastructure. You can choose between **Amazon M
 #### 🚀 Starting MSK (The "Two-Step")
 1. **Create Cluster** (Public Access DISABLED):
    ```bash
-   export AWS_PROFILE=irbull-msk
    cd infrastructure/msk
    terraform apply
    ```
@@ -47,7 +46,6 @@ terraform destroy
 
 #### 🚀 Starting EC2 Kafka
 ```bash
-export AWS_PROFILE=irbull-msk
 cd infrastructure/ec2-kafka
 terraform apply
 ```
@@ -73,7 +71,6 @@ to see the connection string (brokers).
 This project includes scripts to manage topics and stream events from Postgres to Kafka.
 
 ### Prerequisites
-- **AWS Profile**: You must have `AWS_PROFILE=irbull-msk` set (or your equivalent) to authenticate with Amazon MSK using IAM.
 - **Environment**: Ensure `.env` contains `KAFKA_BROKERS` and `KAFKA_AUTH_METHOD=aws-iam`.
 
 ### Scripts
@@ -81,19 +78,19 @@ This project includes scripts to manage topics and stream events from Postgres t
 #### 1. Initialize Topics
 Creates the `events.raw` topic on the cluster. Idempotent.
 ```bash
-AWS_PROFILE=irbull-msk bun run kafka:init
+bun run kafka:init
 ```
 
 #### 2. Start Publisher (Forwarder)
 Polls the database for new events and publishes them to Kafka. Uses `.checkpoint` to track progress.
 ```bash
-AWS_PROFILE=irbull-msk bun run kafka:publish
+bun run kafka:publish
 ```
 
 #### 3. Start Materializer (Consumer)
 Consumes events from Kafka and materializes them into Postgres state tables. Idempotent (safe to replay).
 ```bash
-AWS_PROFILE=irbull-msk bun run kafka:materialize
+bun run kafka:materialize
 ```
 
 Handles these event types:
