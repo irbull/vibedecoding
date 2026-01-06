@@ -299,6 +299,31 @@ async function handleTodoCompleted(event: LifestreamEvent): Promise<void> {
   console.log(`  [todo.completed] ${event.subject_id}`);
 }
 
+async function handleVisibilityChanged(event: LifestreamEvent): Promise<void> {
+  const { visibility } = event.payload as { visibility?: string };
+
+  if (!visibility || !['public', 'private'].includes(visibility)) {
+    console.log(`  [link.visibility_changed] Invalid visibility: ${visibility}, skipping`);
+    return;
+  }
+
+  // Update links table
+  await sql`
+    UPDATE lifestream.links
+    SET visibility = ${visibility}
+    WHERE subject_id = ${event.subject_id}
+  `;
+
+  // Update subjects table
+  await sql`
+    UPDATE lifestream.subjects
+    SET visibility = ${visibility}
+    WHERE subject_id = ${event.subject_id}
+  `;
+
+  console.log(`  [link.visibility_changed] ${event.subject_id} -> ${visibility}`);
+}
+
 async function handleAnnotationAdded(event: LifestreamEvent): Promise<void> {
   const { annotation_id, link_subject_id, quote, note, selector, visibility } = event.payload as {
     annotation_id: string;
@@ -359,6 +384,9 @@ async function processEvent(event: LifestreamEvent): Promise<void> {
       break;
     case 'annotation.added':
       await handleAnnotationAdded(event);
+      break;
+    case 'link.visibility_changed':
+      await handleVisibilityChanged(event);
       break;
     default:
       console.log(`  [unknown] Skipping unhandled event type: ${event.event_type}`);

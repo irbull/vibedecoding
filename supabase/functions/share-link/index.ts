@@ -157,7 +157,7 @@ Deno.serve(async (req: Request) => {
         subject: "link",
         subject_id: subjectId,
         created_at: occurredAt,
-        visibility: "private",
+        visibility: "public",
         meta: {},
       }, { onConflict: "subject,subject_id" });
 
@@ -176,7 +176,7 @@ Deno.serve(async (req: Request) => {
         created_at: occurredAt,
         source: source,
         status: "new",
-        visibility: "private",
+        visibility: "public",
         pinned: false,
       }, { onConflict: "subject_id" });
 

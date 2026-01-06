@@ -16,7 +16,8 @@
     "agent:enricher": "bun run scripts/agent_enricher.ts",
     "agent:publisher": "bun run scripts/agent_publisher.ts",
     "clean:link": "bun run scripts/clean_link.ts",
-    "retry:failed": "bun run scripts/retry_failed_links.ts"
+    "retry:failed": "bun run scripts/retry_failed_links.ts",
+    "admin:set-visibility": "bun run scripts/admin_set_visibility.ts"
   },
   "dependencies": {
     "@mozilla/readability": "^0.6.0",
