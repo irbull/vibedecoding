@@ -1,4 +1,12 @@
 terraform {
+  backend "s3" {
+    bucket         = "vibedecoding-terraform-state"
+    key            = "stream-agents/ec2-kafka/terraform.tfstate"
+    region         = "us-west-2"
+    dynamodb_table = "vibedecoding-terraform-locks"
+    encrypt        = true
+  }
+
   required_providers {
     aws = {
       source  = "hashicorp/aws"

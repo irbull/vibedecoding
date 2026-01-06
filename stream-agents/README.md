@@ -66,6 +66,19 @@ terraform output
 ```
 to see the connection string (brokers).
 
+### Auto-Reset on Provisioning
+Both Terraform configurations include a `null_resource` that automatically runs `kafka:reset` after the cluster is created. This clears stale DB state (`event_ingest_dedupe`, `kafka_offsets`, `published_to_kafka`) that would otherwise cause the materializer to skip events.
+
+**Requirements** for auto-reset to work:
+- `bun` installed on the machine running `terraform apply`
+- `.env` file with `DATABASE_URL` and Kafka credentials
+- Network access to both Kafka and Postgres
+
+If the auto-reset fails, you can run it manually:
+```bash
+bun run kafka:reset
+```
+
 ## Kafka Integration
 
 This project includes scripts to manage topics and stream events from Postgres to Kafka.
