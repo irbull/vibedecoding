@@ -1,8 +1,10 @@
 ---
-import BaseLayout from '../../layouts/BaseLayout.astro';
-import { getPublishedLinks, closeDb, type PublishedLink } from '../../lib/db';
+export const prerender = false;
 
-// Fetch published links at build time (SSG)
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import { getPublishedLinks, type PublishedLink } from '../../lib/db';
+
+// Fetch published links on each request (SSR)
 let links: PublishedLink[] = [];
 let fetchError: string | null = null;
 
@@ -11,9 +13,6 @@ try {
 } catch (err) {
   console.error('Failed to fetch links:', err);
   fetchError = err instanceof Error ? err.message : 'Unknown error';
-} finally {
-  // Close connection after build-time fetch
-  await closeDb();
 }
 ---
 

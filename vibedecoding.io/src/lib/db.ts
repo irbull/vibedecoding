@@ -1,11 +1,11 @@
 /**
- * Database client for Astro SSG builds
+ * Database client for Astro SSR
  * Connects to lifestream schema to fetch published links
+ * Uses persistent connection pool for server-side rendering
  */
 
 import postgres from 'postgres';
 
-// For SSG builds, we need DATABASE_URL at build time
 // Astro uses import.meta.env (powered by Vite) instead of process.env
 const DATABASE_URL = import.meta.env.DATABASE_URL;
 
@@ -13,10 +13,10 @@ if (!DATABASE_URL) {
   throw new Error('Missing DATABASE_URL environment variable. Add it to .env file.');
 }
 
-// Create postgres client with conservative settings for build-time use
+// Create postgres client with settings for SSR
 export const sql = postgres(DATABASE_URL, {
-  max: 5,              // Smaller pool for build-time
-  idle_timeout: 10,
+  max: 5,
+  idle_timeout: 30,
   connect_timeout: 10,
 });
 
@@ -64,9 +64,3 @@ export async function getPublishedLinks(): Promise<PublishedLink[]> {
   return rows;
 }
 
-/**
- * Close database connection (for cleanup after build)
- */
-export async function closeDb(): Promise<void> {
-  await sql.end();
-}
