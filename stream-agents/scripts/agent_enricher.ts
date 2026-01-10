@@ -1,7 +1,7 @@
 /**
  * Enricher Agent
  *
- * Consumes `content.fetched` events from Kafka, calls OpenAI to generate
+ * Consumes work messages from `work.enrich_link`, calls OpenAI to generate
  * tags and summaries, and emits `enrichment.completed` events to Postgres.
  *
  * Uses Kafka-native KTable pattern for tag alignment:
@@ -9,17 +9,21 @@
  * - Passes known tags to LLM for consistency
  * - Emits new tags back to `tags.catalog`
  *
+ * On failure, emits `work.failed` event for retry handling by the router.
+ *
  * Run with: bun run agent:enricher
  */
 
 import { sql, closeDb } from '../src/lib/db';
 import { createConsumer, getProducer, disconnectKafka } from '../src/lib/kafka';
+import { WORK_TOPICS, type WorkMessage } from '../src/lib/work_message';
 import OpenAI from 'openai';
 import type { Consumer, EachMessagePayload } from 'kafkajs';
 
-const CONSUMER_GROUP = 'enricher-agent-v1';
-const EVENTS_TOPIC = 'events.raw';
+const CONSUMER_GROUP = 'enricher-agent-v2';
+const WORK_TOPIC = WORK_TOPICS.ENRICH_LINK;
 const TAGS_TOPIC = 'tags.catalog';
+const AGENT_NAME = 'enricher';
 const MODEL = 'gpt-4o-mini';
 const MAX_CONTENT_CHARS = 32000; // ~8K tokens for cost control
 const MAX_TAGS_IN_PROMPT = 100; // Limit tags in prompt to control size
@@ -27,19 +31,6 @@ const MAX_TAGS_IN_PROMPT = 100; // Limit tags in prompt to control size
 // ============================================================
 // Types
 // ============================================================
-
-interface LifestreamEvent {
-  id: string;
-  occurred_at: string;
-  received_at: string;
-  source: string;
-  subject: string;
-  subject_id: string;
-  event_type: string;
-  payload: Record<string, unknown>;
-  correlation_id?: string;
-  causation_id?: string;
-}
 
 interface EnrichmentResult {
   tags: string[];
@@ -84,19 +75,6 @@ async function updateTagCatalog(newTags: string[]): Promise<void> {
     console.error(`[enricher] Failed to update tag catalog:`, err);
     // Continue anyway - local state is still updated
   }
-}
-
-// ============================================================
-// Idempotency
-// ============================================================
-
-async function alreadyEnriched(subjectId: string): Promise<boolean> {
-  const result = await sql`
-    SELECT 1 FROM lifestream.link_metadata
-    WHERE subject_id = ${subjectId}
-      AND array_length(tags, 1) > 0
-  `;
-  return result.length > 0;
 }
 
 // ============================================================
@@ -159,7 +137,7 @@ Respond ONLY with valid JSON in this exact format:
 async function emitEnrichmentCompleted(
   subjectId: string,
   result: EnrichmentResult,
-  correlationId?: string
+  correlationId: string
 ): Promise<void> {
   const payload = {
     tags: result.tags,
@@ -171,7 +149,23 @@ async function emitEnrichmentCompleted(
 
   await sql`
     INSERT INTO lifestream.events (occurred_at, source, subject, subject_id, event_type, payload, correlation_id)
-    VALUES (now(), 'agent:enricher', 'link', ${subjectId}, 'enrichment.completed', ${sql.json(payload)}, ${correlationId ?? null})
+    VALUES (now(), 'agent:enricher', 'link', ${subjectId}, 'enrichment.completed', ${sql.json(payload)}, ${correlationId})
+  `;
+}
+
+async function emitWorkFailed(
+  workMessage: WorkMessage,
+  error: string
+): Promise<void> {
+  const payload = {
+    work_message: workMessage,
+    error,
+    agent: AGENT_NAME,
+  };
+
+  await sql`
+    INSERT INTO lifestream.events (occurred_at, source, subject, subject_id, event_type, payload, correlation_id)
+    VALUES (now(), 'agent:enricher', 'link', ${workMessage.subject_id}, 'work.failed', ${sql.json(payload)}, ${workMessage.correlation_id})
   `;
 }
 
@@ -192,51 +186,36 @@ function handleTagCatalogMessage(message: EachMessagePayload['message']): void {
   }
 }
 
-async function handleContentFetchedEvent(event: LifestreamEvent): Promise<void> {
-  const { title, text_content, fetch_error } = event.payload as {
+async function handleWorkMessage(workMessage: WorkMessage): Promise<void> {
+  const { title, text_content } = workMessage.payload as {
     title?: string;
     text_content?: string;
-    fetch_error?: string;
   };
 
-  // Skip if fetch had an error
-  if (fetch_error) {
-    console.log(`[enricher] Skipping ${event.subject_id}: fetch error - ${fetch_error}`);
-    return;
-  }
-
-  // Skip if no text content
   if (!text_content) {
-    console.log(`[enricher] Skipping ${event.subject_id}: no text content`);
+    console.log(`[enricher] Skipping ${workMessage.subject_id}: no text content in work message`);
     return;
   }
 
-  // Check if already enriched (idempotency)
-  if (await alreadyEnriched(event.subject_id)) {
-    console.log(`[enricher] Already enriched: ${event.subject_id}`);
-    return;
-  }
-
-  console.log(`[enricher] Enriching: ${event.subject_id} (${text_content.length} chars, ${knownTags.size} known tags)`);
+  console.log(`[enricher] Enriching: ${workMessage.subject_id} (${text_content.length} chars, ${knownTags.size} known tags, attempt ${workMessage.attempt}/${workMessage.max_attempts})`);
 
   try {
     // Call LLM for enrichment with known tags
     const result = await enrichContent(title ?? null, text_content, knownTags);
 
     // Emit enrichment.completed event
-    await emitEnrichmentCompleted(event.subject_id, result, event.id);
+    await emitEnrichmentCompleted(workMessage.subject_id, result, workMessage.correlation_id);
 
     // Update tag catalog with any new tags
     await updateTagCatalog(result.tags);
 
-    console.log(`[enricher] Completed: ${event.subject_id} -> [${result.tags.join(', ')}]`);
+    console.log(`[enricher] Completed: ${workMessage.subject_id} -> [${result.tags.join(', ')}]`);
   } catch (err) {
-    if (err instanceof Error) {
-      console.error(`[enricher] Error for ${event.subject_id}: ${err.message}`);
-    } else {
-      console.error(`[enricher] Error for ${event.subject_id}:`, err);
-    }
-    // Don't emit an event on error - will retry on next run
+    const errorMessage = err instanceof Error ? err.message : 'Unknown error';
+    console.error(`[enricher] Error for ${workMessage.subject_id}: ${errorMessage}`);
+
+    // Emit work.failed for router to handle retry
+    await emitWorkFailed(workMessage, errorMessage);
   }
 }
 
@@ -247,17 +226,11 @@ async function handleMessage({ topic, message }: EachMessagePayload): Promise<vo
     return;
   }
 
-  // Handle events
+  // Handle work messages
   if (!message.value) return;
 
-  const event: LifestreamEvent = JSON.parse(message.value.toString());
-
-  // Only process content.fetched events
-  if (event.event_type !== 'content.fetched') {
-    return;
-  }
-
-  await handleContentFetchedEvent(event);
+  const workMessage: WorkMessage = JSON.parse(message.value.toString());
+  await handleWorkMessage(workMessage);
 }
 
 // ============================================================
@@ -270,14 +243,14 @@ let isShuttingDown = false;
 async function main(): Promise<void> {
   console.log('🧠 Starting Enricher Agent...');
   console.log(`   Consumer Group: ${CONSUMER_GROUP}`);
-  console.log(`   Topics: ${EVENTS_TOPIC}, ${TAGS_TOPIC}`);
+  console.log(`   Topics: ${WORK_TOPIC}, ${TAGS_TOPIC}`);
   console.log(`   Model: ${MODEL}`);
   console.log('   Press Ctrl+C to stop.\n');
 
   consumer = await createConsumer(CONSUMER_GROUP);
 
   // Subscribe to both topics
-  await consumer.subscribe({ topics: [EVENTS_TOPIC, TAGS_TOPIC], fromBeginning: true });
+  await consumer.subscribe({ topics: [WORK_TOPIC, TAGS_TOPIC], fromBeginning: true });
 
   await consumer.run({
     eachMessage: handleMessage,

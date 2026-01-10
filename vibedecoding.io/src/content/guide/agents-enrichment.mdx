@@ -15,73 +15,78 @@ This is where **agents** come in.
 
 ## What is an Agent?
 
-In the Vibe Decoding system, an agent is a Kafka consumer that does one thing well: it listens for specific event types, performs some transformation or enrichment, and emits new events as output.
+In the Vibe Decoding system, an agent is a Kafka consumer that does one thing well: it receives work commands from a dedicated queue, performs some transformation or enrichment, and emits new events as output.
 
 Agents are the workhorses of the enrichment pipeline. Each agent:
 
-1. **Subscribes** to one or more Kafka topics
-2. **Filters** for events it cares about
-3. **Transforms** the event data (fetch content, call an LLM, compute derived values)
-4. **Emits** new events that downstream agents or the materializer can consume
+1. **Subscribes** to a dedicated work topic (e.g., `work.fetch_link`)
+2. **Processes** every message it receives (no filtering needed)
+3. **Transforms** the data (fetch content, call an LLM, compute derived values)
+4. **Emits** new events that flow back through the system
 
 <Callout type="principle">
 Agents should be single-purpose. One agent fetches content. Another enriches it. A third publishes it. This separation makes the system easier to reason about, test, and recover from failures.
 </Callout>
 
-The beauty of this architecture is that agents are decoupled. The fetcher doesn't know about the enricher. The enricher doesn't know about the materializer. They communicate only through events, which means you can:
+The beauty of this architecture is that agents are decoupled. The fetcher doesn't know about the enricher. The enricher doesn't know about the materializer. A central **router** dispatches work to each agent's queue, handling idempotency checks and retry logic. This means:
 
-- Replay events to reprocess data
-- Add new agents without touching existing ones
+- Agents trust their input (if they receive work, it needs to be done)
+- Retry logic is centralized, not duplicated
+- You can monitor backlog per agent independently
 - Scale agents independently based on their workload
-- Replace an agent's implementation without changing the interface
 
 ## The Fetcher Agent
 
-The first agent in our pipeline is the **Fetcher**. When a `link.added` event arrives, the fetcher's job is simple: fetch the URL and extract readable content.
+The first agent in our pipeline is the **Fetcher**. When a work message arrives on `work.fetch_link`, the fetcher's job is simple: fetch the URL and extract readable content.
 
 Here's the core loop:
 
 ```typescript
 // From: stream-agents/scripts/agent_fetcher.ts
 
-async function handleMessage({ topic, partition, message }: EachMessagePayload): Promise<void> {
-  if (!message.value) {
-    return;
-  }
+const CONSUMER_GROUP = 'fetcher-agent-v2';
+const TOPIC = 'work.fetch_link';
 
-  const event: LifestreamEvent = JSON.parse(message.value.toString());
+async function handleMessage({ message }: EachMessagePayload): Promise<void> {
+  if (!message.value) return;
 
-  // Only process link.added events
-  if (event.event_type !== 'link.added') {
-    return;
-  }
-
-  const { url } = event.payload as { url?: string };
+  const workMessage: WorkMessage = JSON.parse(message.value.toString());
+  const { url } = workMessage.payload as { url?: string };
 
   if (!url) {
-    console.log(`[fetcher] WARNING: Missing url in payload, skipping: ${event.subject_id}`);
+    console.log(`[fetcher] WARNING: Missing url, skipping: ${workMessage.subject_id}`);
     return;
   }
 
-  // Check if already fetched (idempotency)
-  if (await contentAlreadyFetched(event.subject_id)) {
-    console.log(`[fetcher] Already fetched: ${event.subject_id}`);
-    return;
+  console.log(`[fetcher] Fetching: ${url} (attempt ${workMessage.attempt}/${workMessage.max_attempts})`);
+
+  try {
+    // Rate limit per domain
+    const domain = getDomain(url);
+    await rateLimitForDomain(domain);
+
+    // Fetch and extract content
+    const result = await fetchAndExtract(url);
+
+    // Check if fetch resulted in an error that should trigger retry
+    if (result.error && !result.textContent) {
+      await emitWorkFailed(workMessage, result.error);
+      return;
+    }
+
+    // Emit content.fetched event
+    await emitContentFetched(workMessage.subject_id, result, workMessage.correlation_id);
+  } catch (err) {
+    // Emit work.failed for router to handle retry
+    await emitWorkFailed(workMessage, err.message);
   }
-
-  console.log(`[fetcher] Fetching: ${url}`);
-
-  // Rate limit per domain
-  const domain = getDomain(url);
-  await rateLimitForDomain(domain);
-
-  // Fetch and extract content
-  const result = await fetchAndExtract(url);
-
-  // Emit content.fetched event
-  await emitContentFetched(event.subject_id, result, event.id);
 }
 ```
+
+Notice what's **not** in this code:
+- No event type filtering (we only receive work meant for us)
+- No idempotency check (the router handles this)
+- Retry logic is delegated to the router via `work.failed` events
 
 The fetcher uses [Mozilla Readability](https://github.com/mozilla/readability), the same library that powers Firefox's Reader View, to extract the main content from web pages. This strips away navigation, ads, and other noise, leaving just the article text.
 
@@ -305,20 +310,22 @@ async function handleEnrichmentCompleted(event: LifestreamEvent): Promise<void> 
 
 The materializer uses `ON CONFLICT ... DO UPDATE` (upserts) extensively. This means events can be replayed safely: the same event processed twice will produce the same result.
 
-## Agent Idempotency
+## Idempotency and the Router
 
 A critical property of any event-driven system is **idempotency**: processing the same event multiple times should produce the same result.
 
 Why does this matter? In distributed systems, things fail. Consumers crash. Networks hiccup. Kafka might deliver the same message twice. Without idempotency, you'd end up with duplicate processing, wasted resources, and potentially inconsistent state.
 
+In our architecture, idempotency is handled by the **router**, not by individual agents. This centralizes the logic and simplifies agent code.
+
 <Callout type="pattern">
-**Check-before-write pattern**: Before doing expensive work (like fetching a URL or calling an LLM), check if the output already exists. If it does, skip the work.
+**Check-before-dispatch pattern**: The router checks if work has already been done before emitting to a work queue. Agents trust that if they receive work, it needs to be done.
 </Callout>
 
-Here's how the fetcher implements this:
+Here's how the router implements idempotency checks:
 
 ```typescript
-// From: stream-agents/scripts/agent_fetcher.ts
+// From: stream-agents/scripts/router.ts
 
 async function contentAlreadyFetched(subjectId: string): Promise<boolean> {
   const result = await sql`
@@ -327,12 +334,6 @@ async function contentAlreadyFetched(subjectId: string): Promise<boolean> {
   `;
   return result.length > 0;
 }
-```
-
-And the enricher:
-
-```typescript
-// From: stream-agents/scripts/agent_enricher.ts
 
 async function alreadyEnriched(subjectId: string): Promise<boolean> {
   const result = await sql`
@@ -342,11 +343,45 @@ async function alreadyEnriched(subjectId: string): Promise<boolean> {
   `;
   return result.length > 0;
 }
+
+async function processEvent(event: LifestreamEvent): Promise<void> {
+  switch (event.event_type) {
+    case 'link.added':
+      if (await contentAlreadyFetched(event.subject_id)) return;
+      await emitWorkMessage('fetch_link', event);
+      break;
+    case 'content.fetched':
+      if (await alreadyEnriched(event.subject_id)) return;
+      await emitWorkMessage('enrich_link', event);
+      break;
+    // ... etc
+  }
+}
 ```
 
-Notice the enricher's check is slightly more sophisticated: it not only checks if a record exists, but whether it has actual tags. This handles the case where a previous enrichment attempt failed partway through.
+The router also handles retry logic. When an agent fails, it emits a `work.failed` event. The router catches this and either retries (up to 3 attempts) or sends to the dead letter queue:
 
-The materializer also implements idempotency at the Kafka level, tracking which offsets have been processed:
+```typescript
+// From: stream-agents/scripts/router.ts
+
+async function handleWorkFailed(event: LifestreamEvent): Promise<void> {
+  const { work_message, error, agent } = event.payload;
+
+  if (work_message.attempt < work_message.max_attempts) {
+    // Retry with incremented attempt count
+    await emitWorkMessage(work_message.work_type, {
+      ...work_message,
+      attempt: work_message.attempt + 1,
+      last_error: error,
+    });
+  } else {
+    // Send to dead letter queue
+    await emitToDeadLetter(work_message, error, agent);
+  }
+}
+```
+
+The materializer still implements idempotency at the Kafka level, tracking which offsets have been processed:
 
 ```typescript
 // From: stream-agents/scripts/consume_kafka_materialize.ts
@@ -362,7 +397,7 @@ async function isAlreadyProcessed(topic: string, partition: number, offset: bigi
 }
 ```
 
-This double-layered idempotency (at both the business logic and infrastructure levels) makes the system robust against restarts, replays, and failures.
+This layered approach (router for business logic, materializer for infrastructure) makes the system robust against restarts, replays, and failures while keeping agent code simple.
 
 ## The KTable Pattern
 
@@ -431,41 +466,62 @@ async function updateTagCatalog(newTags: string[]): Promise<void> {
 
 The `tags.catalog` topic is configured with **log compaction**, which means Kafka will keep only the latest message for each key. Since we use a single key (`all`), the topic effectively stores just the current state of all tags.
 
-When a new enricher instance starts up, it subscribes to both topics:
+When a new enricher instance starts up, it subscribes to both its work topic and the tags catalog:
 
 ```typescript
 // From: stream-agents/scripts/agent_enricher.ts
 
-await consumer.subscribe({ topics: [EVENTS_TOPIC, TAGS_TOPIC], fromBeginning: true });
+const WORK_TOPIC = 'work.enrich_link';
+const TAGS_TOPIC = 'tags.catalog';
+
+await consumer.subscribe({ topics: [WORK_TOPIC, TAGS_TOPIC], fromBeginning: true });
 ```
 
-By reading `fromBeginning`, it rebuilds its local tag catalog before processing any events. This ensures tag consistency even after restarts.
+By reading `fromBeginning`, it rebuilds its local tag catalog before processing any work. This ensures tag consistency even after restarts.
 
 ## The Enrichment Pipeline
 
 Let's trace through a complete example. You save a link to an article about React Server Components:
 
 1. **Input capture** emits `link.added` to Kafka
-2. **Fetcher** sees `link.added`, fetches the URL, extracts content, emits `content.fetched`
-3. **Enricher** sees `content.fetched`, calls the LLM with known tags, emits `enrichment.completed`
-4. **Materializer** sees all three events, projects them into `links`, `link_content`, and `link_metadata` tables
+2. **Router** sees `link.added`, checks idempotency, emits to `work.fetch_link`
+3. **Fetcher** processes work, fetches the URL, extracts content, emits `content.fetched`
+4. **Router** sees `content.fetched`, emits to `work.enrich_link`
+5. **Enricher** processes work, calls the LLM with known tags, emits `enrichment.completed`
+6. **Router** sees `enrichment.completed`, emits to `work.publish_link`
+7. **Publisher** emits `publish.completed`
+8. **Materializer** sees all events, projects them into `links`, `link_content`, `link_metadata`, and `publish_state` tables
 
 The link is now fully enriched, searchable by tags, and ready to surface when relevant.
 
 ```
-link.added ──► Fetcher ──► content.fetched ──► Enricher ──► enrichment.completed
-                                                                    │
+                              ┌─────────────┐
+link.added ──► Router ──────► │work.fetch   │──► Fetcher ──► content.fetched
+                              └─────────────┘                       │
                                                                     ▼
-                                                            ┌──────────────┐
-                                                            │  Materializer │
-                                                            └──────────────┘
-                                                                    │
-                                                                    ▼
-                                                            ┌──────────────┐
-                                                            │   Database    │
-                                                            │  (queryable   │
-                                                            │    state)     │
-                                                            └──────────────┘
+                              ┌─────────────┐                    Router
+                              │work.enrich  │◄──────────────────────┘
+                              └─────────────┘
+                                    │
+                                    ▼
+                               Enricher ──► enrichment.completed ──► Router
+                                                                       │
+                              ┌─────────────┐                          │
+                              │work.publish │◄─────────────────────────┘
+                              └─────────────┘
+                                    │
+                                    ▼
+                               Publisher ──► publish.completed
+                                                    │
+                                                    ▼
+                                            ┌──────────────┐
+                                            │  Materializer │
+                                            └──────────────┘
+                                                    │
+                                                    ▼
+                                            ┌──────────────┐
+                                            │   Database    │
+                                            └──────────────┘
 ```
 
 ## What's Next

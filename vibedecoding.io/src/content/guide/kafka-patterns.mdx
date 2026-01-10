@@ -37,11 +37,12 @@ Plus, running a single-node Kafka cluster is surprisingly lightweight. We'll cov
 
 ## Topics and Partitions
 
-A Kafka topic is a named stream of events. For our life stream, we use two primary topics:
+A Kafka topic is a named stream of events. For our life stream, we use several topics organized into two categories: **event topics** (facts about what happened) and **work topics** (commands for what to do).
 
 ```typescript
 // From: stream-agents/scripts/init_kafka.ts
 const TOPICS: TopicConfig[] = [
+  // Event topics (facts)
   {
     name: 'events.raw',
     numPartitions: 3,
@@ -57,7 +58,12 @@ const TOPICS: TopicConfig[] = [
       { name: 'min.compaction.lag.ms', value: '0' },
       { name: 'segment.ms', value: String(60 * 60 * 1000) } // 1 hour segments
     ]
-  }
+  },
+  // Work topics (tasks/commands)
+  { name: 'work.fetch_link', numPartitions: 3, ... },
+  { name: 'work.enrich_link', numPartitions: 3, ... },
+  { name: 'work.publish_link', numPartitions: 3, ... },
+  { name: 'work.dead_letter', numPartitions: 1, retentionMs: 30 days },
 ];
 ```
 
@@ -70,6 +76,19 @@ The 7-day retention means events stick around long enough to replay if something
 ### tags.catalog
 
 This topic uses **log compaction**, a different pattern. Instead of deleting old messages after a time window, Kafka keeps only the latest message for each key. We use this to maintain a catalog of all known tags, enabling the enricher agent to suggest consistent tagging across articles.
+
+### work.* topics
+
+These are **work queues** for agents. Instead of agents filtering through all events, the router dispatches work to specific topics:
+
+| Topic | Consumer | Purpose |
+|-------|----------|---------|
+| `work.fetch_link` | Fetcher Agent | URLs that need content extraction |
+| `work.enrich_link` | Enricher Agent | Content that needs LLM processing |
+| `work.publish_link` | Publisher Agent | Links ready for publication |
+| `work.dead_letter` | (Manual) | Failed work after max retries |
+
+This separation provides cleaner architecture, per-queue monitoring, and simplified agent code.
 
 <Callout type="pattern">
 Use log compaction (`cleanup.policy: 'compact'`) for reference data that agents need to look up. It's a lightweight alternative to a full KTable implementation.
@@ -204,6 +223,120 @@ Notice the order: send to Kafka first, then mark as published. If we crash betwe
 We accept at-least-once delivery (possible duplicates) in exchange for simpler code and guaranteed delivery. The alternative (distributed transactions) adds significant complexity for minimal benefit in a personal system.
 </Callout>
 
+## The Router Pattern
+
+Before diving into consumer groups, let's talk about a key architectural pattern: the **router**.
+
+In the early versions of this system, each agent consumed directly from `events.raw` and filtered for the events it cared about. This worked, but had drawbacks:
+
+- Every agent received every event and had to filter locally
+- Idempotency checks were duplicated across agents
+- No centralized place for retry logic
+- Hard to monitor backlog per work type
+
+The solution is a **router** that separates "facts" (events) from "tasks" (work commands):
+
+```
+                         events.raw
+                             │
+                        [ROUTER]
+              (idempotency + retry logic)
+                             │
+        ┌────────────────────┼────────────────────┐
+        ↓                    ↓                    ↓
+   work.fetch_link     work.enrich_link    work.publish_link
+        │                    │                    │
+        ↓                    ↓                    ↓
+   [Fetcher]            [Enricher]          [Publisher]
+```
+
+<Callout type="principle">
+Events are facts about what happened. Work messages are commands for what to do. The router translates between them.
+</Callout>
+
+### Router Implementation
+
+The router consumes from `events.raw` and, for each event, decides whether to create work:
+
+```typescript
+// From: stream-agents/scripts/router.ts
+async function processEvent(event: LifestreamEvent): Promise<void> {
+  switch (event.event_type) {
+    case 'link.added':
+      // Check if already fetched (idempotency)
+      if (await contentAlreadyFetched(event.subject_id)) return;
+      await emitWorkMessage('fetch_link', event);
+      break;
+    case 'content.fetched':
+      // Skip if fetch had error or no content
+      if (event.payload.fetch_error || !event.payload.text_content) return;
+      if (await alreadyEnriched(event.subject_id)) return;
+      await emitWorkMessage('enrich_link', event);
+      break;
+    case 'enrichment.completed':
+      if (await alreadyPublished(event.subject_id)) return;
+      await emitWorkMessage('publish_link', event);
+      break;
+    case 'work.failed':
+      await handleWorkFailed(event);
+      break;
+  }
+}
+```
+
+All idempotency checks happen here, in one place. Agents can trust that if they receive a work message, the work needs to be done.
+
+### Work Messages
+
+Work messages are simpler than events—they're commands, not facts:
+
+```typescript
+// From: stream-agents/src/lib/work_message.ts
+interface WorkMessage {
+  subject_id: string;
+  work_type: 'fetch_link' | 'enrich_link' | 'publish_link';
+  correlation_id: string;
+  triggered_by_event_id: string;
+  attempt: number;        // starts at 1, incremented on retry
+  max_attempts: number;   // default 3
+  created_at: string;
+  last_error?: string;    // populated on retry
+  payload: Record<string, unknown>;
+}
+```
+
+The `attempt` and `max_attempts` fields enable retry logic, which we'll cover shortly.
+
+### Retry and Dead Letter Queue
+
+When an agent fails to process work, it emits a `work.failed` event. The router catches this and decides whether to retry:
+
+```typescript
+// From: stream-agents/scripts/router.ts
+async function handleWorkFailed(event: LifestreamEvent): Promise<void> {
+  const { work_message, error, agent } = event.payload;
+
+  if (work_message.attempt < work_message.max_attempts) {
+    // Retry: re-emit with incremented attempt
+    const retryWork = {
+      ...work_message,
+      attempt: work_message.attempt + 1,
+      last_error: error,
+    };
+    await emitWorkMessage(work_message.work_type, retryWork);
+  } else {
+    // Max retries exceeded: send to dead letter queue
+    await emitToDeadLetter(work_message, error, agent);
+  }
+}
+```
+
+The dead letter queue (`work.dead_letter`) retains failed messages for 30 days. You can inspect them, fix the underlying issue, and replay manually.
+
+<Callout type="tradeoff">
+The router adds a component to run, but centralizes cross-cutting concerns (idempotency, retry, monitoring) in one place. For a personal system, this is a worthwhile trade.
+</Callout>
+
 ## Consumer Groups
 
 Kafka's consumer groups are where the magic happens. Multiple consumers in the same group coordinate to process a topic in parallel, with each partition assigned to exactly one consumer.
@@ -221,65 +354,66 @@ export const createConsumer = async (groupId: string): Promise<Consumer> => {
 
 ### The Fetcher Agent Pattern
 
-Here's how our fetcher agent (which downloads and parses article content) consumes events:
+With the router in place, agents become much simpler. They consume from their dedicated work topic and trust that every message needs processing:
 
 ```typescript
 // From: stream-agents/scripts/agent_fetcher.ts
-const CONSUMER_GROUP = 'fetcher-agent-v1';
-const TOPIC = 'events.raw';
+const CONSUMER_GROUP = 'fetcher-agent-v2';
+const TOPIC = 'work.fetch_link';  // Dedicated work topic
 
 async function main(): Promise<void> {
   console.log('Starting Fetcher Agent...');
-  console.log(`Consumer Group: ${CONSUMER_GROUP}`);
 
   const consumer = await createConsumer(CONSUMER_GROUP);
-
   await consumer.subscribe({ topic: TOPIC, fromBeginning: true });
 
   await consumer.run({
-    eachMessage: async ({ topic, partition, message }) => {
+    eachMessage: async ({ message }) => {
       if (!message.value) return;
 
-      const event = JSON.parse(message.value.toString());
+      const workMessage = JSON.parse(message.value.toString());
+      const { url } = workMessage.payload;
 
-      // Only process link.added events
-      if (event.event_type !== 'link.added') return;
+      console.log(`Fetching: ${url} (attempt ${workMessage.attempt}/${workMessage.max_attempts})`);
 
-      // Idempotency check
-      if (await contentAlreadyFetched(event.subject_id)) {
-        console.log(`Already fetched: ${event.subject_id}`);
-        return;
+      try {
+        const result = await fetchAndExtract(url);
+        await emitContentFetched(workMessage.subject_id, result, workMessage.correlation_id);
+      } catch (err) {
+        // Emit work.failed for router to handle retry
+        await emitWorkFailed(workMessage, err.message);
       }
-
-      // Process the event
-      const result = await fetchAndExtract(event.payload.url);
-      await emitContentFetched(event.subject_id, result);
     },
   });
 }
 ```
 
+Notice what's **missing** compared to the old pattern:
+- No event type filtering (every message is relevant)
+- No idempotency check (router handles this)
+- Retry is handled by emitting `work.failed`, not by the agent
+
 ### Key Consumer Concepts
 
-**Group ID versioning**: Notice `fetcher-agent-v1`. When you change processing logic significantly, bump the version. This creates a new consumer group that starts from the beginning, reprocessing all events with the new logic.
+**Group ID versioning**: Notice `fetcher-agent-v2`. When you change processing logic significantly, bump the version. This creates a new consumer group that starts from the beginning, reprocessing all work with the new logic.
 
-**`fromBeginning: true`**: For a new consumer group, start from the earliest available offset. This ensures you don't miss events that arrived before the consumer started.
+**`fromBeginning: true`**: For a new consumer group, start from the earliest available offset. This ensures you don't miss work that arrived before the consumer started.
 
-**Idempotency**: Always check if you've already processed an event. Kafka guarantees at-least-once delivery, so your consumer must handle duplicates gracefully.
+**Trust the router**: Agents no longer do idempotency checks. If they receive a work message, the work needs to be done.
 
 ### Multi-Topic Consumers
 
-Some agents need multiple topics. The enricher agent, for example, consumes both `events.raw` and `tags.catalog`:
+Some agents still need multiple topics. The enricher agent consumes both its work topic and `tags.catalog`:
 
 ```typescript
 // From: stream-agents/scripts/agent_enricher.ts
-const CONSUMER_GROUP = 'enricher-agent-v1';
-const EVENTS_TOPIC = 'events.raw';
+const CONSUMER_GROUP = 'enricher-agent-v2';
+const WORK_TOPIC = 'work.enrich_link';
 const TAGS_TOPIC = 'tags.catalog';
 
 // Subscribe to both topics
 await consumer.subscribe({
-  topics: [EVENTS_TOPIC, TAGS_TOPIC],
+  topics: [WORK_TOPIC, TAGS_TOPIC],
   fromBeginning: true
 });
 
@@ -291,11 +425,9 @@ await consumer.run({
       return;
     }
 
-    // Handle events.raw messages
-    const event = JSON.parse(message.value.toString());
-    if (event.event_type === 'content.fetched') {
-      await handleContentFetchedEvent(event);
-    }
+    // Handle work messages
+    const workMessage = JSON.parse(message.value.toString());
+    await processEnrichment(workMessage);
   },
 });
 ```
@@ -512,21 +644,37 @@ A single-node cluster has no replication. If the instance dies, you lose uncommi
 
 ## Putting It Together
 
-With Kafka in place, your life stream architecture looks like this:
+With Kafka and the router in place, your life stream architecture looks like this:
 
 ```
-┌─────────────┐     ┌─────────────┐     ┌─────────────┐
-│   Postgres  │────▶│    Kafka    │────▶│   Agents    │
-│  (events)   │     │ events.raw  │     │  (process)  │
-└─────────────┘     └─────────────┘     └─────────────┘
-      │                    │                    │
-      │                    │                    │
-      ▼                    ▼                    ▼
-   Source of           Durable              Emit new
-    Truth             Transport             events
+┌─────────────┐     ┌─────────────┐     ┌─────────────┐     ┌─────────────┐
+│   Postgres  │────▶│    Kafka    │────▶│   Router    │────▶│   Agents    │
+│  (events)   │     │ events.raw  │     │ (dispatch)  │     │  (process)  │
+└─────────────┘     └─────────────┘     └─────────────┘     └─────────────┘
+      │                    │                    │                    │
+      │                    │                    │                    │
+      ▼                    ▼                    ▼                    ▼
+   Source of           Durable            Idempotency           Emit new
+    Truth             Transport            + Retry               events
 ```
 
-Events are born in Postgres, flow through Kafka for durable transport and fanout, get processed by agents, and the results land back in Postgres for querying.
+Events are born in Postgres, flow through Kafka for durable transport, get dispatched by the router to agent-specific work queues, get processed by agents, and the results land back in Postgres for querying.
+
+### Running the Full Pipeline
+
+Start these in separate terminals:
+
+```bash
+# Infrastructure
+bun run kafka:publish      # DB → Kafka forwarder
+bun run kafka:materialize  # Kafka → DB state sync
+bun run router             # events.raw → work.* topics
+
+# Agents
+bun run agent:fetcher      # Fetches URLs, extracts content
+bun run agent:enricher     # Calls OpenAI for tags/summaries
+bun run agent:publisher    # Marks links as published
+```
 
 ---
 

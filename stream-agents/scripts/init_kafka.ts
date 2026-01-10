@@ -1,4 +1,5 @@
 import { getKafka, disconnectKafka } from '../src/lib/kafka';
+import { WORK_TOPICS } from '../src/lib/work_message';
 
 interface TopicConfig {
   name: string;
@@ -6,12 +7,16 @@ interface TopicConfig {
   configEntries: { name: string; value: string }[];
 }
 
+const SEVEN_DAYS_MS = 7 * 24 * 60 * 60 * 1000;
+const THIRTY_DAYS_MS = 30 * 24 * 60 * 60 * 1000;
+
 const TOPICS: TopicConfig[] = [
+  // Event topics (facts)
   {
     name: 'events.raw',
     numPartitions: 3,
     configEntries: [
-      { name: 'retention.ms', value: String(7 * 24 * 60 * 60 * 1000) } // 7 days
+      { name: 'retention.ms', value: String(SEVEN_DAYS_MS) }
     ]
   },
   {
@@ -22,7 +27,36 @@ const TOPICS: TopicConfig[] = [
       { name: 'min.compaction.lag.ms', value: '0' },
       { name: 'segment.ms', value: String(60 * 60 * 1000) } // 1 hour segments for faster compaction
     ]
-  }
+  },
+  // Work topics (tasks/commands)
+  {
+    name: WORK_TOPICS.FETCH_LINK,
+    numPartitions: 3,
+    configEntries: [
+      { name: 'retention.ms', value: String(SEVEN_DAYS_MS) }
+    ]
+  },
+  {
+    name: WORK_TOPICS.ENRICH_LINK,
+    numPartitions: 3,
+    configEntries: [
+      { name: 'retention.ms', value: String(SEVEN_DAYS_MS) }
+    ]
+  },
+  {
+    name: WORK_TOPICS.PUBLISH_LINK,
+    numPartitions: 3,
+    configEntries: [
+      { name: 'retention.ms', value: String(SEVEN_DAYS_MS) }
+    ]
+  },
+  {
+    name: WORK_TOPICS.DEAD_LETTER,
+    numPartitions: 1, // Single partition for DLQ (easier to monitor)
+    configEntries: [
+      { name: 'retention.ms', value: String(THIRTY_DAYS_MS) } // Keep failures longer
+    ]
+  },
 ];
 
 async function main() {

@@ -1,44 +1,31 @@
 /**
  * Fetcher Agent
  *
- * Consumes `link.added` events from Kafka, fetches URL content,
+ * Consumes work messages from `work.fetch_link`, fetches URL content,
  * extracts readable text using Mozilla Readability, and emits
  * `content.fetched` events to Postgres.
  *
- * Uses Option C for race condition handling:
- * - URL comes from event payload (no dependency on materializer)
- * - Only checks if link_content exists (idempotency)
+ * On failure, emits `work.failed` event for retry handling by the router.
  *
  * Run with: bun run agent:fetcher
  */
 
 import { sql, closeDb } from '../src/lib/db';
 import { createConsumer } from '../src/lib/kafka';
+import { WORK_TOPICS, type WorkMessage } from '../src/lib/work_message';
 import { Readability } from '@mozilla/readability';
 import { parseHTML } from 'linkedom';
 import type { Consumer, EachMessagePayload } from 'kafkajs';
 
-const CONSUMER_GROUP = 'fetcher-agent-v1';
-const TOPIC = 'events.raw';
+const CONSUMER_GROUP = 'fetcher-agent-v2';
+const TOPIC = WORK_TOPICS.FETCH_LINK;
+const AGENT_NAME = 'fetcher';
 const FETCH_TIMEOUT_MS = 30_000;
 const RATE_LIMIT_MS = 1_000;
 
 // ============================================================
 // Types
 // ============================================================
-
-interface LifestreamEvent {
-  id: string;
-  occurred_at: string;
-  received_at: string;
-  source: string;
-  subject: string;
-  subject_id: string;
-  event_type: string;
-  payload: Record<string, unknown>;
-  correlation_id?: string;
-  causation_id?: string;
-}
 
 interface FetchResult {
   finalUrl: string;
@@ -70,18 +57,6 @@ async function rateLimitForDomain(domain: string): Promise<void> {
     }
   }
   lastFetchByDomain.set(domain, Date.now());
-}
-
-// ============================================================
-// Idempotency
-// ============================================================
-
-async function contentAlreadyFetched(subjectId: string): Promise<boolean> {
-  const result = await sql`
-    SELECT 1 FROM lifestream.link_content
-    WHERE subject_id = ${subjectId}
-  `;
-  return result.length > 0;
 }
 
 // ============================================================
@@ -158,7 +133,7 @@ async function fetchAndExtract(url: string): Promise<FetchResult> {
 async function emitContentFetched(
   subjectId: string,
   result: FetchResult,
-  correlationId?: string
+  correlationId: string
 ): Promise<void> {
   const payload = {
     final_url: result.finalUrl,
@@ -169,7 +144,23 @@ async function emitContentFetched(
 
   await sql`
     INSERT INTO lifestream.events (occurred_at, source, subject, subject_id, event_type, payload, correlation_id)
-    VALUES (now(), 'agent:fetcher', 'link', ${subjectId}, 'content.fetched', ${sql.json(payload)}, ${correlationId ?? null})
+    VALUES (now(), 'agent:fetcher', 'link', ${subjectId}, 'content.fetched', ${sql.json(payload)}, ${correlationId})
+  `;
+}
+
+async function emitWorkFailed(
+  workMessage: WorkMessage,
+  error: string
+): Promise<void> {
+  const payload = {
+    work_message: workMessage,
+    error,
+    agent: AGENT_NAME,
+  };
+
+  await sql`
+    INSERT INTO lifestream.events (occurred_at, source, subject, subject_id, event_type, payload, correlation_id)
+    VALUES (now(), 'agent:fetcher', 'link', ${workMessage.subject_id}, 'work.failed', ${sql.json(payload)}, ${workMessage.correlation_id})
   `;
 }
 
@@ -177,47 +168,51 @@ async function emitContentFetched(
 // Message Handler
 // ============================================================
 
-async function handleMessage({ topic, partition, message }: EachMessagePayload): Promise<void> {
+async function handleMessage({ message }: EachMessagePayload): Promise<void> {
   if (!message.value) {
     return;
   }
 
-  const event: LifestreamEvent = JSON.parse(message.value.toString());
-
-  // Only process link.added events
-  if (event.event_type !== 'link.added') {
-    return;
-  }
-
-  const { url } = event.payload as { url?: string };
+  const workMessage: WorkMessage = JSON.parse(message.value.toString());
+  const { url } = workMessage.payload as { url?: string };
 
   if (!url) {
-    console.log(`[fetcher] WARNING: Missing url in payload, skipping: ${event.subject_id}`);
+    console.log(`[fetcher] WARNING: Missing url in payload, skipping: ${workMessage.subject_id}`);
     return;
   }
 
-  // Check if already fetched (idempotency)
-  if (await contentAlreadyFetched(event.subject_id)) {
-    console.log(`[fetcher] Already fetched: ${event.subject_id}`);
-    return;
-  }
+  console.log(`[fetcher] Fetching: ${url} (attempt ${workMessage.attempt}/${workMessage.max_attempts})`);
 
-  console.log(`[fetcher] Fetching: ${url}`);
+  try {
+    // Rate limit per domain
+    const domain = getDomain(url);
+    await rateLimitForDomain(domain);
 
-  // Rate limit per domain
-  const domain = getDomain(url);
-  await rateLimitForDomain(domain);
+    // Fetch and extract content
+    const result = await fetchAndExtract(url);
 
-  // Fetch and extract content
-  const result = await fetchAndExtract(url);
+    // Check if fetch resulted in an error that should trigger retry
+    if (result.error && !result.textContent) {
+      // Emit work.failed for router to handle retry
+      await emitWorkFailed(workMessage, result.error);
+      console.log(`[fetcher] Failed: ${workMessage.subject_id} -> ${result.error}`);
+      return;
+    }
 
-  // Emit content.fetched event
-  await emitContentFetched(event.subject_id, result, event.id);
+    // Emit content.fetched event (success or partial success with title)
+    await emitContentFetched(workMessage.subject_id, result, workMessage.correlation_id);
 
-  if (result.error) {
-    console.log(`[fetcher] Error for ${event.subject_id}: ${result.error}`);
-  } else {
-    console.log(`[fetcher] Fetched: ${event.subject_id} -> "${result.title?.slice(0, 50)}..."`);
+    if (result.error) {
+      console.log(`[fetcher] Partial: ${workMessage.subject_id} -> "${result.title?.slice(0, 50)}..." (${result.error})`);
+    } else {
+      console.log(`[fetcher] Fetched: ${workMessage.subject_id} -> "${result.title?.slice(0, 50)}..."`);
+    }
+  } catch (err) {
+    const errorMessage = err instanceof Error ? err.message : 'Unknown error';
+    console.error(`[fetcher] Error for ${workMessage.subject_id}: ${errorMessage}`);
+
+    // Emit work.failed for router to handle retry
+    await emitWorkFailed(workMessage, errorMessage);
   }
 }
 

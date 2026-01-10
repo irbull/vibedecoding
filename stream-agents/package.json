@@ -12,6 +12,7 @@
     "kafka:reset": "bun run scripts/reset_kafka.ts",
     "kafka:publish": "bun run scripts/publish_events_to_kafka.ts",
     "kafka:materialize": "bun run scripts/consume_kafka_materialize.ts",
+    "router": "bun run scripts/router.ts",
     "agent:fetcher": "bun run scripts/agent_fetcher.ts",
     "agent:enricher": "bun run scripts/agent_enricher.ts",
     "agent:publisher": "bun run scripts/agent_publisher.ts",

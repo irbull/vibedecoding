@@ -1,53 +1,25 @@
 /**
  * Publisher Agent
  *
- * Consumes `enrichment.completed` events from Kafka and emits
+ * Consumes work messages from `work.publish_link` and emits
  * `publish.completed` events to Postgres.
  *
  * This agent marks links as ready for publishing. The materializer
  * then updates `publish_state` and `links.status` to 'published'.
+ *
+ * On failure, emits `work.failed` event for retry handling by the router.
  *
  * Run with: bun run agent:publisher
  */
 
 import { sql, closeDb } from '../src/lib/db';
 import { createConsumer } from '../src/lib/kafka';
+import { WORK_TOPICS, type WorkMessage } from '../src/lib/work_message';
 import type { Consumer, EachMessagePayload } from 'kafkajs';
 
-const CONSUMER_GROUP = 'publisher-agent-v1';
-const TOPIC = 'events.raw';
-
-// ============================================================
-// Types
-// ============================================================
-
-interface LifestreamEvent {
-  id: string;
-  occurred_at: string;
-  received_at: string;
-  source: string;
-  subject: string;
-  subject_id: string;
-  event_type: string;
-  payload: Record<string, unknown>;
-  correlation_id?: string;
-  causation_id?: string;
-}
-
-// ============================================================
-// Idempotency
-// ============================================================
-
-async function alreadyPublished(subjectId: string): Promise<boolean> {
-  // Check if publish_state exists and published_version >= desired_version
-  const result = await sql`
-    SELECT 1 FROM lifestream.publish_state
-    WHERE subject_id = ${subjectId}
-      AND published_version >= desired_version
-      AND dirty = false
-  `;
-  return result.length > 0;
-}
+const CONSUMER_GROUP = 'publisher-agent-v2';
+const TOPIC = WORK_TOPICS.PUBLISH_LINK;
+const AGENT_NAME = 'publisher';
 
 // ============================================================
 // Event Emission
@@ -55,7 +27,7 @@ async function alreadyPublished(subjectId: string): Promise<boolean> {
 
 async function emitPublishCompleted(
   subjectId: string,
-  correlationId?: string
+  correlationId: string
 ): Promise<void> {
   const payload = {
     published_at: new Date().toISOString(),
@@ -63,7 +35,23 @@ async function emitPublishCompleted(
 
   await sql`
     INSERT INTO lifestream.events (occurred_at, source, subject, subject_id, event_type, payload, correlation_id)
-    VALUES (now(), 'agent:publisher', 'link', ${subjectId}, 'publish.completed', ${sql.json(payload)}, ${correlationId ?? null})
+    VALUES (now(), 'agent:publisher', 'link', ${subjectId}, 'publish.completed', ${sql.json(payload)}, ${correlationId})
+  `;
+}
+
+async function emitWorkFailed(
+  workMessage: WorkMessage,
+  error: string
+): Promise<void> {
+  const payload = {
+    work_message: workMessage,
+    error,
+    agent: AGENT_NAME,
+  };
+
+  await sql`
+    INSERT INTO lifestream.events (occurred_at, source, subject, subject_id, event_type, payload, correlation_id)
+    VALUES (now(), 'agent:publisher', 'link', ${workMessage.subject_id}, 'work.failed', ${sql.json(payload)}, ${workMessage.correlation_id})
   `;
 }
 
@@ -76,32 +64,20 @@ async function handleMessage({ message }: EachMessagePayload): Promise<void> {
     return;
   }
 
-  const event: LifestreamEvent = JSON.parse(message.value.toString());
+  const workMessage: WorkMessage = JSON.parse(message.value.toString());
 
-  // Only process enrichment.completed events
-  if (event.event_type !== 'enrichment.completed') {
-    return;
-  }
-
-  // Check if already published (idempotency)
-  if (await alreadyPublished(event.subject_id)) {
-    console.log(`[publisher] Already published: ${event.subject_id}`);
-    return;
-  }
-
-  console.log(`[publisher] Publishing: ${event.subject_id}`);
+  console.log(`[publisher] Publishing: ${workMessage.subject_id} (attempt ${workMessage.attempt}/${workMessage.max_attempts})`);
 
   try {
     // Emit publish.completed event
-    await emitPublishCompleted(event.subject_id, event.id);
-    console.log(`[publisher] Completed: ${event.subject_id}`);
+    await emitPublishCompleted(workMessage.subject_id, workMessage.correlation_id);
+    console.log(`[publisher] Completed: ${workMessage.subject_id}`);
   } catch (err) {
-    if (err instanceof Error) {
-      console.error(`[publisher] Error for ${event.subject_id}: ${err.message}`);
-    } else {
-      console.error(`[publisher] Error for ${event.subject_id}:`, err);
-    }
-    // Don't emit an event on error - will retry on next run
+    const errorMessage = err instanceof Error ? err.message : 'Unknown error';
+    console.error(`[publisher] Error for ${workMessage.subject_id}: ${errorMessage}`);
+
+    // Emit work.failed for router to handle retry
+    await emitWorkFailed(workMessage, errorMessage);
   }
 }
 

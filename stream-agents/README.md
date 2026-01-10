@@ -86,10 +86,45 @@ This project includes scripts to manage topics and stream events from Postgres t
 ### Prerequisites
 - **Environment**: Ensure `.env` contains `KAFKA_BROKERS` and `KAFKA_AUTH_METHOD=aws-iam`.
 
+### Architecture
+
+The system uses a **Work Topics** pattern that separates "facts" (events) from "tasks" (work messages):
+
+```
+                         events.raw
+                             │
+                        [ROUTER]
+              (idempotency + retry logic)
+                             │
+        ┌────────────────────┼────────────────────┐
+        ↓                    ↓                    ↓
+   work.fetch_link     work.enrich_link    work.publish_link
+        │                    │                    │
+        ↓                    ↓                    ↓
+   [Fetcher]            [Enricher]          [Publisher]
+        │                    │                    │
+        └────────────────────┼────────────────────┘
+                             │
+                        events.raw
+                             │
+                       [Materializer]
+```
+
+### Topics
+
+| Topic | Purpose | Partitions | Retention |
+|-------|---------|------------|-----------|
+| `events.raw` | All domain events (facts) | 3 | 7 days |
+| `tags.catalog` | Tag vocabulary (compacted) | 1 | Compacted |
+| `work.fetch_link` | Fetch work queue | 3 | 7 days |
+| `work.enrich_link` | Enrich work queue | 3 | 7 days |
+| `work.publish_link` | Publish work queue | 3 | 7 days |
+| `work.dead_letter` | Failed work (after retries) | 1 | 30 days |
+
 ### Scripts
 
 #### 1. Initialize Topics
-Creates the `events.raw` topic on the cluster. Idempotent.
+Creates all topics (`events.raw`, `tags.catalog`, and work topics). Idempotent.
 ```bash
 bun run kafka:init
 ```
@@ -100,7 +135,13 @@ Polls the database for new events and publishes them to Kafka. Tracks publicatio
 bun run kafka:publish
 ```
 
-#### 3. Start Materializer (Consumer)
+#### 3. Start Router
+Consumes events from `events.raw`, performs idempotency checks, and emits work messages to agent-specific topics. Also handles retries and dead-lettering.
+```bash
+bun run router
+```
+
+#### 4. Start Materializer (Consumer)
 Consumes events from Kafka and materializes them into Postgres state tables. Idempotent (safe to replay).
 ```bash
 bun run kafka:materialize
@@ -113,10 +154,41 @@ Handles these event types:
 | `content.fetched` | `link_content`, `links.status` |
 | `enrichment.completed` | `link_metadata`, `links.status`, `publish_state` |
 | `publish.completed` | `publish_state`, `links.status` |
+| `work.failed` | (handled by router for retry) |
 | `temp.reading_recorded` | `temperature_readings`, `temperature_latest` |
 | `todo.created` | `subjects`, `todos` |
 | `todo.completed` | `todos.completed_at` |
 | `annotation.added` | `subjects`, `annotations` |
+
+#### 5. Start Agents
+Each agent consumes from its dedicated work topic:
+```bash
+bun run agent:fetcher    # Consumes work.fetch_link
+bun run agent:enricher   # Consumes work.enrich_link
+bun run agent:publisher  # Consumes work.publish_link
+```
+
+### Running the Full Pipeline
+
+Start these in separate terminals:
+```bash
+# Infrastructure
+bun run kafka:publish      # DB → Kafka forwarder
+bun run kafka:materialize  # Kafka → DB state sync
+bun run router             # events.raw → work.* topics
+
+# Agents
+bun run agent:fetcher      # Fetches URLs, extracts content
+bun run agent:enricher     # Calls OpenAI for tags/summaries
+bun run agent:publisher    # Marks links as published
+```
+
+### Retry Logic
+
+- Agents emit `work.failed` events on failure
+- Router checks attempt count (max 3) and either retries or dead-letters
+- Dead letter queue retains failed messages for 30 days
+- Failed work can be inspected/replayed manually
 
 ### Known Issues
 - **TimeoutNegativeWarning**: When running with Bun, you may see `TimeoutNegativeWarning: ... is a negative number` at startup. This is a benign warning caused by strict timer validation in the runtime interacting with the KafkaJS library. It does not affect functionality.
