@@ -8,6 +8,7 @@ canonicalUrl: "https://vibedecoding.io/guide/kafka-patterns"
 ---
 
 import Callout from '../../components/Callout.astro';
+import StreamingDiagram from '../../components/StreamingDiagram.astro';
 
 In [Part 0](/guide/vibe-decoding), we introduced the concept of a life stream: a unified event log of your digital interactions. But how do you actually transport those events reliably? How do you ensure that a saved bookmark at 2 AM doesn't disappear into the void before your enrichment agents wake up?
 
@@ -224,6 +225,8 @@ We accept at-least-once delivery (possible duplicates) in exchange for simpler c
 </Callout>
 
 ## The Router Pattern
+
+<StreamingDiagram class="my-8" />
 
 Before diving into consumer groups, let's talk about a key architectural pattern: the **router**.
 
