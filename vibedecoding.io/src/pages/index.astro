@@ -1,5 +1,6 @@
 ---
 import BaseLayout from '../layouts/BaseLayout.astro';
+import OverviewDiagramCanvas from '../components/OverviewDiagramCanvas.astro';
 ---
 
 <BaseLayout title="vibedecoding">
@@ -8,11 +9,7 @@ import BaseLayout from '../layouts/BaseLayout.astro';
     <div class="max-w-5xl mx-auto px-4 sm:px-6">
       <!-- Diagram -->
       <div class="mb-8">
-        <img
-          src="/images/stream-process.jpg"
-          alt="Vibe Decoding: Interpreting Life's Signals Over Time - showing event stream with agents (Materializer, Fetcher, Enricher, Pattern Detector) processing inputs like voice notes, links, and sensors into insights"
-          class="w-full rounded-lg shadow-lg"
-        />
+        <OverviewDiagramCanvas class="w-full rounded-lg shadow-lg" />
       </div>
 
       <!-- Tagline and Description -->

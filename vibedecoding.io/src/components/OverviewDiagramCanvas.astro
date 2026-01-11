@@ -1,0 +1,729 @@
+---
+interface Props {
+  class?: string;
+}
+const { class: className } = Astro.props;
+---
+
+<div class:list={['overview-diagram-canvas', className]}>
+  <canvas id="streamCanvas" width="900" height="400"></canvas>
+
+  <!-- SVG overlay for labels, agents, and particles -->
+  <svg class="overlay" viewBox="0 0 900 400">
+    <defs>
+      <!-- Particle glow gradients -->
+      <radialGradient id="particleGlow" cx="50%" cy="50%" r="50%">
+        <stop offset="0%" stop-color="#60a5fa" stop-opacity="1" />
+        <stop offset="60%" stop-color="#3b82f6" stop-opacity="0.7" />
+        <stop offset="100%" stop-color="#1d4ed8" stop-opacity="0" />
+      </radialGradient>
+      <radialGradient id="particleGlowLight" cx="50%" cy="50%" r="50%">
+        <stop offset="0%" stop-color="#bfdbfe" stop-opacity="1" />
+        <stop offset="60%" stop-color="#93c5fd" stop-opacity="0.7" />
+        <stop offset="100%" stop-color="#60a5fa" stop-opacity="0" />
+      </radialGradient>
+      <!-- Agent box gradient -->
+      <linearGradient id="agentGradient" x1="0%" y1="0%" x2="0%" y2="100%">
+        <stop offset="0%" stop-color="#f8fafc" />
+        <stop offset="100%" stop-color="#e2e8f0" />
+      </linearGradient>
+    </defs>
+
+    <!-- Title -->
+    <text x="450" y="35" text-anchor="middle" fill="#1e3a5f" font-size="18" font-weight="600" font-family="system-ui, sans-serif">
+      <tspan fill="#1e40af">Vibe Decoding:</tspan>
+      <tspan fill="#475569" font-style="italic" font-weight="400"> Interpreting Life's Signals Over Time</tspan>
+    </text>
+
+    <!-- Left Inputs -->
+    <g class="inputs" fill="#64748b" font-size="14" font-family="system-ui, sans-serif">
+      <g transform="translate(25, 110)">
+        <circle cx="16" cy="0" r="16" fill="#dbeafe" stroke="#3b82f6" stroke-width="1.5" />
+        <text x="16" y="5" text-anchor="middle" fill="#3b82f6" font-size="14">&#x1F3A4;</text>
+        <text x="40" y="5" fill="#475569" font-weight="500">Voice Notes</text>
+      </g>
+      <g transform="translate(25, 155)">
+        <circle cx="16" cy="0" r="16" fill="#dbeafe" stroke="#3b82f6" stroke-width="1.5" />
+        <text x="16" y="5" text-anchor="middle" fill="#3b82f6" font-size="14">&#x1F517;</text>
+        <text x="40" y="5" fill="#475569" font-weight="500">Links</text>
+      </g>
+      <g transform="translate(25, 200)">
+        <circle cx="16" cy="0" r="16" fill="#dbeafe" stroke="#3b82f6" stroke-width="1.5" />
+        <text x="16" y="5" text-anchor="middle" fill="#3b82f6" font-size="14">&#x1F4DD;</text>
+        <text x="40" y="5" fill="#475569" font-weight="500">Annotations</text>
+      </g>
+      <g transform="translate(25, 245)">
+        <circle cx="16" cy="0" r="16" fill="#dbeafe" stroke="#3b82f6" stroke-width="1.5" />
+        <text x="16" y="5" text-anchor="middle" fill="#3b82f6" font-size="14">&#x1F4CD;</text>
+        <text x="40" y="5" fill="#475569" font-weight="500">Location</text>
+      </g>
+      <g transform="translate(25, 290)">
+        <circle cx="16" cy="0" r="16" fill="#dbeafe" stroke="#3b82f6" stroke-width="1.5" />
+        <text x="16" y="5" text-anchor="middle" fill="#3b82f6" font-size="14">&#x1F4E1;</text>
+        <text x="40" y="5" fill="#475569" font-weight="500">Sensors</text>
+      </g>
+    </g>
+
+    <!-- Right Outputs - icon before text, positioned to fit within viewBox -->
+    <g class="outputs" fill="#64748b" font-size="14" font-family="system-ui, sans-serif">
+      <g transform="translate(745, 110)">
+        <circle cx="0" cy="0" r="16" fill="#fef3c7" stroke="#f59e0b" stroke-width="1.5" />
+        <text x="0" y="5" text-anchor="middle" fill="#d97706" font-size="14">&#x1F4A1;</text>
+        <text x="22" y="5" text-anchor="start" fill="#475569" font-weight="500">Reminders</text>
+      </g>
+      <g transform="translate(745, 155)">
+        <circle cx="0" cy="0" r="16" fill="#dcfce7" stroke="#22c55e" stroke-width="1.5" />
+        <text x="0" y="5" text-anchor="middle" fill="#16a34a" font-size="14">&#x1F504;</text>
+        <text x="22" y="5" text-anchor="start" fill="#475569" font-weight="500">Resurfaced</text>
+      </g>
+      <g transform="translate(745, 200)">
+        <circle cx="0" cy="0" r="16" fill="#e0e7ff" stroke="#6366f1" stroke-width="1.5" />
+        <text x="0" y="5" text-anchor="middle" fill="#4f46e5" font-size="14">&#x1F4AC;</text>
+        <text x="22" y="5" text-anchor="start" fill="#475569" font-weight="500">Insights</text>
+      </g>
+      <g transform="translate(745, 245)">
+        <circle cx="0" cy="0" r="16" fill="#fce7f3" stroke="#ec4899" stroke-width="1.5" />
+        <text x="0" y="5" text-anchor="middle" fill="#db2777" font-size="14">&#x1F4DA;</text>
+        <text x="22" y="5" text-anchor="start" fill="#475569" font-weight="500">Knowledge</text>
+      </g>
+    </g>
+
+    <!-- Stream Label -->
+    <text x="450" y="205" text-anchor="middle" fill="white" font-size="14" font-weight="600" font-family="system-ui, sans-serif" style="text-shadow: 0 1px 3px rgba(0,0,0,0.3);">Event Stream</text>
+
+    <!-- Agent Boxes - centered between stream label and edges -->
+    <g class="agents">
+      <g transform="translate(290, 90)" class="agent">
+        <rect x="-50" y="-18" width="100" height="36" rx="8" fill="url(#agentGradient)" stroke="#94a3b8" stroke-width="1.5" />
+        <text x="0" y="5" text-anchor="middle" fill="#334155" font-size="12" font-weight="500" font-family="system-ui, sans-serif">Materializer</text>
+      </g>
+      <g transform="translate(610, 90)" class="agent">
+        <rect x="-40" y="-18" width="80" height="36" rx="8" fill="url(#agentGradient)" stroke="#94a3b8" stroke-width="1.5" />
+        <text x="0" y="5" text-anchor="middle" fill="#334155" font-size="12" font-weight="500" font-family="system-ui, sans-serif">Fetcher</text>
+      </g>
+      <g transform="translate(290, 310)" class="agent">
+        <rect x="-40" y="-18" width="80" height="36" rx="8" fill="url(#agentGradient)" stroke="#94a3b8" stroke-width="1.5" />
+        <text x="0" y="5" text-anchor="middle" fill="#334155" font-size="12" font-weight="500" font-family="system-ui, sans-serif">Enricher</text>
+      </g>
+      <g transform="translate(610, 310)" class="agent">
+        <rect x="-60" y="-18" width="120" height="36" rx="8" fill="url(#agentGradient)" stroke="#94a3b8" stroke-width="1.5" />
+        <text x="0" y="5" text-anchor="middle" fill="#334155" font-size="12" font-weight="500" font-family="system-ui, sans-serif">Pattern Detector</text>
+      </g>
+    </g>
+
+    <!-- Agent connection lines - more prominent with gradient -->
+    <defs>
+      <linearGradient id="agentLineGradient" x1="0%" y1="0%" x2="0%" y2="100%">
+        <stop offset="0%" stop-color="#3b82f6" stop-opacity="0.8" />
+        <stop offset="50%" stop-color="#60a5fa" stop-opacity="0.5" />
+        <stop offset="100%" stop-color="#93c5fd" stop-opacity="0.3" />
+      </linearGradient>
+      <linearGradient id="agentLineGradientUp" x1="0%" y1="100%" x2="0%" y2="0%">
+        <stop offset="0%" stop-color="#3b82f6" stop-opacity="0.8" />
+        <stop offset="50%" stop-color="#60a5fa" stop-opacity="0.5" />
+        <stop offset="100%" stop-color="#93c5fd" stop-opacity="0.3" />
+      </linearGradient>
+    </defs>
+    <g class="agent-lines" fill="none">
+      <!-- Materializer (top-left) - at x=290 -->
+      <path d="M 290,108 Q 290,150 330,180" stroke="url(#agentLineGradient)" stroke-width="2.5" stroke-linecap="round" />
+      <!-- Fetcher (top-right) - at x=610 -->
+      <path d="M 610,108 Q 610,150 570,180" stroke="url(#agentLineGradient)" stroke-width="2.5" stroke-linecap="round" />
+      <!-- Enricher (bottom-left) - at x=290 -->
+      <path d="M 290,292 Q 290,250 330,220" stroke="url(#agentLineGradientUp)" stroke-width="2.5" stroke-linecap="round" />
+      <!-- Pattern Detector (bottom-right) - at x=610 -->
+      <path d="M 610,292 Q 610,250 570,220" stroke="url(#agentLineGradientUp)" stroke-width="2.5" stroke-linecap="round" />
+    </g>
+
+    <!-- Animated Particles -->
+    <g class="particles">
+      <!-- Input particles -->
+      <circle class="particle input-p1" r="6" fill="url(#particleGlow)" />
+      <circle class="particle input-p1" r="6" fill="url(#particleGlow)" style="animation-delay: -1.5s" />
+      <circle class="particle input-p2" r="5" fill="url(#particleGlowLight)" />
+      <circle class="particle input-p2" r="5" fill="url(#particleGlowLight)" style="animation-delay: -1.2s" />
+      <circle class="particle input-p3" r="6" fill="url(#particleGlow)" />
+      <circle class="particle input-p3" r="6" fill="url(#particleGlow)" style="animation-delay: -2s" />
+      <circle class="particle input-p4" r="5" fill="url(#particleGlowLight)" />
+      <circle class="particle input-p4" r="5" fill="url(#particleGlowLight)" style="animation-delay: -1.8s" />
+      <circle class="particle input-p5" r="6" fill="url(#particleGlow)" />
+      <circle class="particle input-p5" r="6" fill="url(#particleGlow)" style="animation-delay: -0.8s" />
+
+      <!-- Stream particles -->
+      <circle class="particle stream-p1" r="5" fill="url(#particleGlow)" />
+      <circle class="particle stream-p1" r="5" fill="url(#particleGlow)" style="animation-delay: -1s" />
+      <circle class="particle stream-p2" r="4" fill="url(#particleGlowLight)" />
+      <circle class="particle stream-p2" r="4" fill="url(#particleGlowLight)" style="animation-delay: -1.5s" />
+      <circle class="particle stream-p3" r="5" fill="url(#particleGlow)" />
+      <circle class="particle stream-p3" r="5" fill="url(#particleGlow)" style="animation-delay: -0.7s" />
+
+      <!-- Agent particles - bidirectional flow -->
+      <!-- Materializer: stream to agent -->
+      <circle class="particle agent-m-up" r="4" fill="url(#particleGlow)" />
+      <circle class="particle agent-m-up" r="4" fill="url(#particleGlow)" style="animation-delay: -1.5s" />
+      <!-- Materializer: agent to stream -->
+      <circle class="particle agent-m-down" r="4" fill="url(#particleGlowLight)" />
+      <circle class="particle agent-m-down" r="4" fill="url(#particleGlowLight)" style="animation-delay: -0.8s" />
+
+      <!-- Fetcher: stream to agent -->
+      <circle class="particle agent-f-up" r="4" fill="url(#particleGlow)" />
+      <circle class="particle agent-f-up" r="4" fill="url(#particleGlow)" style="animation-delay: -1.3s" />
+      <!-- Fetcher: agent to stream -->
+      <circle class="particle agent-f-down" r="4" fill="url(#particleGlowLight)" />
+      <circle class="particle agent-f-down" r="4" fill="url(#particleGlowLight)" style="animation-delay: -0.6s" />
+
+      <!-- Enricher: stream to agent -->
+      <circle class="particle agent-e-down" r="4" fill="url(#particleGlow)" />
+      <circle class="particle agent-e-down" r="4" fill="url(#particleGlow)" style="animation-delay: -1.1s" />
+      <!-- Enricher: agent to stream -->
+      <circle class="particle agent-e-up" r="4" fill="url(#particleGlowLight)" />
+      <circle class="particle agent-e-up" r="4" fill="url(#particleGlowLight)" style="animation-delay: -0.5s" />
+
+      <!-- Pattern Detector: stream to agent -->
+      <circle class="particle agent-pd-down" r="4" fill="url(#particleGlow)" />
+      <circle class="particle agent-pd-down" r="4" fill="url(#particleGlow)" style="animation-delay: -1.4s" />
+      <!-- Pattern Detector: agent to stream -->
+      <circle class="particle agent-pd-up" r="4" fill="url(#particleGlowLight)" />
+      <circle class="particle agent-pd-up" r="4" fill="url(#particleGlowLight)" style="animation-delay: -0.7s" />
+
+      <!-- Output particles -->
+      <circle class="particle output-p1" r="5" fill="url(#particleGlow)" />
+      <circle class="particle output-p1" r="5" fill="url(#particleGlow)" style="animation-delay: -1.3s" />
+      <circle class="particle output-p2" r="5" fill="url(#particleGlow)" />
+      <circle class="particle output-p2" r="5" fill="url(#particleGlow)" style="animation-delay: -1.8s" />
+      <circle class="particle output-p3" r="5" fill="url(#particleGlow)" />
+      <circle class="particle output-p3" r="5" fill="url(#particleGlow)" style="animation-delay: -0.6s" />
+      <circle class="particle output-p4" r="5" fill="url(#particleGlow)" />
+      <circle class="particle output-p4" r="5" fill="url(#particleGlow)" style="animation-delay: -2.2s" />
+    </g>
+
+    <!-- Caption -->
+    <text x="450" y="375" text-anchor="middle" fill="#64748b" font-size="13" font-style="italic" font-family="system-ui, sans-serif">
+      Agents observe, enrich, and loop context back
+    </text>
+  </svg>
+</div>
+
+<script>
+  // Canvas stream animation
+  const canvas = document.getElementById('streamCanvas') as HTMLCanvasElement;
+  const ctx = canvas.getContext('2d')!;
+
+  let animationId: number;
+  let time = 0;
+
+  // Configuration
+  const config = {
+    ribbonCount: 1,  // Single ribbon for unified look
+    particleCount: 40,
+    sparkleCount: 60,  // Additional sparkle particles
+    streamY: 200,
+    streamHeight: 50,
+    speed: 0.02
+  };
+
+  // Particles for the stream effect
+  interface Particle {
+    x: number;
+    y: number;
+    speed: number;
+    size: number;
+    opacity: number;
+    ribbonIndex: number;
+  }
+
+  // Sparkle particles - stationary twinkling dots
+  interface Sparkle {
+    x: number;
+    y: number;
+    baseY: number;
+    size: number;
+    phase: number;      // For twinkling animation
+    twinkleSpeed: number;
+    maxOpacity: number;
+  }
+
+  const particles: Particle[] = [];
+  const sparkles: Sparkle[] = [];
+
+  // Initialize particles
+  for (let i = 0; i < config.particleCount; i++) {
+    particles.push({
+      x: Math.random() * 900,
+      y: 0,
+      speed: 0.5 + Math.random() * 1.5,
+      size: 1 + Math.random() * 3,
+      opacity: 0.3 + Math.random() * 0.7,
+      ribbonIndex: Math.floor(Math.random() * config.ribbonCount)
+    });
+  }
+
+  // Initialize sparkles throughout the stream area
+  for (let i = 0; i < config.sparkleCount; i++) {
+    const x = 140 + Math.random() * 620;  // Stream area
+    sparkles.push({
+      x,
+      y: 0,
+      baseY: config.streamY + (Math.random() - 0.5) * 80,  // Spread vertically
+      size: 0.5 + Math.random() * 2.5,
+      phase: Math.random() * Math.PI * 2,
+      twinkleSpeed: 0.03 + Math.random() * 0.05,
+      maxOpacity: 0.4 + Math.random() * 0.6
+    });
+  }
+
+  // Get Y position for stream at given x
+  function getStreamY(x: number, t: number): number {
+    // Multiple sine waves for organic motion
+    const y1 = Math.sin(x * 0.008 + t) * 15;
+    const y2 = Math.sin(x * 0.012 + t * 1.3) * 8;
+    const y3 = Math.sin(x * 0.005 + t * 0.7) * 5;
+
+    return config.streamY + y1 + y2 + y3;
+  }
+
+  // Color gradient: purple center, transitioning to light blue at edges
+  const edgeColor = { r: 147, g: 197, b: 253 };    // Light blue at edges
+  const centerColor = { r: 79, g: 52, b: 186 };    // Darker purple/violet in center
+
+  // Get color based on x position (more purple in center, blue at edges)
+  function getColorAtX(x: number, ribbonIndex: number): {r: number, g: number, b: number} {
+    const streamStart = 130;
+    const streamEnd = 770;
+    const streamMid = (streamStart + streamEnd) / 2;
+
+    // Distance from center (0 at center, 1 at edges)
+    const distFromCenter = Math.abs(x - streamMid) / ((streamEnd - streamStart) / 2);
+
+    // Interpolate between center color (purple) and edge color (light blue)
+    const t = Math.pow(distFromCenter, 0.7); // Ease the transition
+
+    return {
+      r: Math.round(centerColor.r + (edgeColor.r - centerColor.r) * t),
+      g: Math.round(centerColor.g + (edgeColor.g - centerColor.g) * t),
+      b: Math.round(centerColor.b + (edgeColor.b - centerColor.b) * t)
+    };
+  }
+
+  function draw() {
+    ctx.clearRect(0, 0, 900, 400);
+
+    const streamStart = 130;
+    const streamEnd = 770;
+
+    // Draw a single unified stream with internal flow variation
+    drawUnifiedStream(streamStart, streamEnd);
+
+    // Draw light accent streams on top of main stream
+    drawLightAccentStreams();
+
+    // Draw sparkles (twinkling background stars)
+    drawSparkles();
+
+    // Draw particles (moving dots)
+    drawParticles();
+
+    // Draw center glow
+    drawCenterGlow();
+  }
+
+  // Draw a single unified stream as a filled shape with gradient
+  function drawUnifiedStream(startX: number, endX: number) {
+    const streamWidth = 90;  // Total stream height
+
+    // Build top and bottom edge paths
+    const topPoints: {x: number, y: number}[] = [];
+    const bottomPoints: {x: number, y: number}[] = [];
+
+    for (let x = startX; x <= endX; x += 3) {
+      const baseY = config.streamY;
+
+      // Flowing wave motion for edges
+      const wave1 = Math.sin(x * 0.008 + time) * 15;
+      const wave2 = Math.sin(x * 0.012 + time * 1.3) * 8;
+      const wave3 = Math.sin(x * 0.005 + time * 0.7) * 5;
+      const waveOffset = wave1 + wave2 + wave3;
+
+      // Edge undulation for organic shape
+      const edgeWave = Math.sin(x * 0.015 + time * 0.5) * 8;
+
+      topPoints.push({ x, y: baseY + waveOffset - streamWidth/2 - edgeWave });
+      bottomPoints.push({ x, y: baseY + waveOffset + streamWidth/2 + edgeWave });
+    }
+
+    // Draw filled stream shape with gradient
+    // Multiple passes for smooth gradient from edge to center
+    const passes = 20;
+
+    for (let pass = 0; pass < passes; pass++) {
+      const t = pass / (passes - 1);  // 0 at edges, 1 at center
+      const shrink = t * 0.9;  // How much to shrink toward center
+
+      ctx.beginPath();
+
+      // Top edge
+      for (let i = 0; i < topPoints.length; i++) {
+        const tp = topPoints[i];
+        const bp = bottomPoints[i];
+        const midY = (tp.y + bp.y) / 2;
+        const y = tp.y + (midY - tp.y) * shrink;
+
+        if (i === 0) ctx.moveTo(tp.x, y);
+        else ctx.lineTo(tp.x, y);
+      }
+
+      // Bottom edge (reverse order)
+      for (let i = bottomPoints.length - 1; i >= 0; i--) {
+        const tp = topPoints[i];
+        const bp = bottomPoints[i];
+        const midY = (tp.y + bp.y) / 2;
+        const y = bp.y + (midY - bp.y) * shrink;
+
+        ctx.lineTo(bp.x, y);
+      }
+
+      ctx.closePath();
+
+      // Gradient fill - more opaque toward center
+      const opacity = 0.15 + t * 0.5;
+
+      // Create horizontal gradient for this pass
+      // Fade to transparent at start and end for smooth edges
+      const gradient = ctx.createLinearGradient(startX, 0, endX, 0);
+      const edgeC = edgeColor;
+      const centerC = centerColor;
+
+      gradient.addColorStop(0, `rgba(${edgeC.r}, ${edgeC.g}, ${edgeC.b}, 0)`);
+      gradient.addColorStop(0.08, `rgba(${edgeC.r}, ${edgeC.g}, ${edgeC.b}, ${opacity * 0.5})`);
+      gradient.addColorStop(0.15, `rgba(${edgeC.r}, ${edgeC.g}, ${edgeC.b}, ${opacity})`);
+      gradient.addColorStop(0.4, `rgba(${centerC.r}, ${centerC.g}, ${centerC.b}, ${opacity})`);
+      gradient.addColorStop(0.5, `rgba(${centerC.r}, ${centerC.g}, ${centerC.b}, ${opacity})`);
+      gradient.addColorStop(0.6, `rgba(${centerC.r}, ${centerC.g}, ${centerC.b}, ${opacity})`);
+      gradient.addColorStop(0.85, `rgba(${edgeC.r}, ${edgeC.g}, ${edgeC.b}, ${opacity})`);
+      gradient.addColorStop(0.92, `rgba(${edgeC.r}, ${edgeC.g}, ${edgeC.b}, ${opacity * 0.5})`);
+      gradient.addColorStop(1, `rgba(${edgeC.r}, ${edgeC.g}, ${edgeC.b}, 0)`);
+
+      ctx.fillStyle = gradient;
+      ctx.fill();
+    }
+
+    // Add internal flow lines for texture/movement
+    drawInternalFlowLines(startX, endX, topPoints, bottomPoints);
+  }
+
+  // Draw subtle internal flow lines within the stream
+  function drawInternalFlowLines(startX: number, endX: number, topPoints: {x: number, y: number}[], bottomPoints: {x: number, y: number}[]) {
+    const lineCount = 8;
+
+    for (let line = 0; line < lineCount; line++) {
+      const t = (line + 1) / (lineCount + 1);  // Position from top to bottom
+
+      ctx.beginPath();
+
+      for (let i = 0; i < topPoints.length; i++) {
+        const tp = topPoints[i];
+        const bp = bottomPoints[i];
+
+        // Interpolate between top and bottom
+        const y = tp.y + (bp.y - tp.y) * t;
+
+        // Add small wave variation for each line
+        const lineWave = Math.sin(tp.x * 0.02 + time * 1.5 + line * 0.7) * 3;
+
+        if (i === 0) ctx.moveTo(tp.x, y + lineWave);
+        else ctx.lineTo(tp.x, y + lineWave);
+      }
+
+      // Get color at center for this line
+      const color = getColorAtX((startX + endX) / 2, 0);
+      const opacity = 0.08 + Math.sin(line * 0.5 + time) * 0.03;
+
+      ctx.strokeStyle = `rgba(${color.r + 50}, ${color.g + 50}, ${color.b + 50}, ${opacity})`;
+      ctx.lineWidth = 1.5;
+      ctx.stroke();
+    }
+  }
+
+  // Draw thin light accent streams at top and bottom edges
+  function drawLightAccentStreams() {
+    const streamStart = 140;
+    const streamEnd = 760;
+
+    // Light blue color for accent streams
+    const accentColor = { r: 191, g: 219, b: 254 }; // Light blue
+
+    // Top accent streams
+    const topOffsets = [-55, -45, -65];
+    const topWidths = [3, 2, 1.5];
+    const topOpacities = [0.35, 0.25, 0.2];
+
+    for (let i = 0; i < topOffsets.length; i++) {
+      const yOffset = topOffsets[i];
+      const width = topWidths[i];
+      const opacity = topOpacities[i];
+      const phaseOffset = i * 0.5;
+
+      // Create gradient for this accent line
+      const grad = ctx.createLinearGradient(streamStart, 0, streamEnd, 0);
+      grad.addColorStop(0, `rgba(${accentColor.r}, ${accentColor.g}, ${accentColor.b}, 0)`);
+      grad.addColorStop(0.1, `rgba(${accentColor.r}, ${accentColor.g}, ${accentColor.b}, ${opacity})`);
+      grad.addColorStop(0.9, `rgba(${accentColor.r}, ${accentColor.g}, ${accentColor.b}, ${opacity})`);
+      grad.addColorStop(1, `rgba(${accentColor.r}, ${accentColor.g}, ${accentColor.b}, 0)`);
+
+      ctx.beginPath();
+      ctx.moveTo(streamStart, config.streamY + yOffset + Math.sin(time + phaseOffset) * 8);
+
+      for (let x = streamStart; x <= streamEnd; x += 4) {
+        // Different wave pattern for accent streams
+        const y = config.streamY + yOffset +
+          Math.sin(x * 0.012 + time * 0.8 + phaseOffset) * 12 +
+          Math.sin(x * 0.006 + time * 0.5 + phaseOffset) * 6;
+        ctx.lineTo(x, y);
+      }
+
+      ctx.strokeStyle = grad;
+      ctx.lineWidth = width;
+      ctx.lineCap = 'round';
+      ctx.lineJoin = 'round';
+      ctx.stroke();
+    }
+
+    // Bottom accent streams
+    const bottomOffsets = [55, 45, 65];
+    const bottomWidths = [3, 2, 1.5];
+    const bottomOpacities = [0.35, 0.25, 0.2];
+
+    for (let i = 0; i < bottomOffsets.length; i++) {
+      const yOffset = bottomOffsets[i];
+      const width = bottomWidths[i];
+      const opacity = bottomOpacities[i];
+      const phaseOffset = i * 0.7 + 2;
+
+      // Create gradient for this accent line
+      const grad = ctx.createLinearGradient(streamStart, 0, streamEnd, 0);
+      grad.addColorStop(0, `rgba(${accentColor.r}, ${accentColor.g}, ${accentColor.b}, 0)`);
+      grad.addColorStop(0.1, `rgba(${accentColor.r}, ${accentColor.g}, ${accentColor.b}, ${opacity})`);
+      grad.addColorStop(0.9, `rgba(${accentColor.r}, ${accentColor.g}, ${accentColor.b}, ${opacity})`);
+      grad.addColorStop(1, `rgba(${accentColor.r}, ${accentColor.g}, ${accentColor.b}, 0)`);
+
+      ctx.beginPath();
+      ctx.moveTo(streamStart, config.streamY + yOffset + Math.sin(time + phaseOffset) * 8);
+
+      for (let x = streamStart; x <= streamEnd; x += 4) {
+        // Different wave pattern for accent streams
+        const y = config.streamY + yOffset +
+          Math.sin(x * 0.01 + time * 0.9 + phaseOffset) * 10 +
+          Math.sin(x * 0.007 + time * 0.6 + phaseOffset) * 5;
+        ctx.lineTo(x, y);
+      }
+
+      ctx.strokeStyle = grad;
+      ctx.lineWidth = width;
+      ctx.lineCap = 'round';
+      ctx.lineJoin = 'round';
+      ctx.stroke();
+    }
+  }
+
+  function drawParticles() {
+    for (const p of particles) {
+      // Update particle position
+      p.x += p.speed;
+      if (p.x > 800) {
+        p.x = 100;
+      }
+
+      // Get Y from stream path with slight vertical offset for variety
+      const verticalOffset = (p.ribbonIndex - 1) * 15;  // Spread particles across stream height
+      p.y = getStreamY(p.x, time) + verticalOffset;
+
+      // Draw particle with glow
+      const gradient = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, p.size * 3);
+      gradient.addColorStop(0, `rgba(255, 255, 255, ${p.opacity})`);
+      gradient.addColorStop(0.5, `rgba(147, 197, 253, ${p.opacity * 0.6})`);
+      gradient.addColorStop(1, 'rgba(59, 130, 246, 0)');
+
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, p.size * 3, 0, Math.PI * 2);
+      ctx.fillStyle = gradient;
+      ctx.fill();
+    }
+  }
+
+  function drawSparkles() {
+    for (const s of sparkles) {
+      // Update sparkle y position to follow the stream movement slightly
+      s.y = s.baseY + Math.sin(time * 0.5 + s.phase) * 10;
+
+      // Twinkling opacity
+      const twinkle = Math.sin(time * s.twinkleSpeed * 60 + s.phase);
+      const opacity = s.maxOpacity * (0.3 + 0.7 * ((twinkle + 1) / 2));
+
+      // Only show sparkle when it's "on" (above threshold)
+      if (opacity > 0.2) {
+        // Draw sparkle with sharp white center and soft glow
+        const gradient = ctx.createRadialGradient(s.x, s.y, 0, s.x, s.y, s.size * 4);
+        gradient.addColorStop(0, `rgba(255, 255, 255, ${opacity})`);
+        gradient.addColorStop(0.2, `rgba(255, 255, 255, ${opacity * 0.8})`);
+        gradient.addColorStop(0.5, `rgba(219, 234, 254, ${opacity * 0.4})`);
+        gradient.addColorStop(1, 'rgba(147, 197, 253, 0)');
+
+        ctx.beginPath();
+        ctx.arc(s.x, s.y, s.size * 4, 0, Math.PI * 2);
+        ctx.fillStyle = gradient;
+        ctx.fill();
+
+        // Add a tiny bright center dot for extra sparkle
+        if (opacity > 0.5 && s.size > 1) {
+          ctx.beginPath();
+          ctx.arc(s.x, s.y, s.size * 0.5, 0, Math.PI * 2);
+          ctx.fillStyle = `rgba(255, 255, 255, ${Math.min(1, opacity * 1.5)})`;
+          ctx.fill();
+        }
+      }
+    }
+  }
+
+  function drawCenterGlow() {
+    // Horizontal center glow
+    const gradient = ctx.createLinearGradient(130, 0, 770, 0);
+    gradient.addColorStop(0, 'rgba(219, 234, 254, 0)');
+    gradient.addColorStop(0.3, 'rgba(219, 234, 254, 0.3)');
+    gradient.addColorStop(0.5, 'rgba(255, 255, 255, 0.4)');
+    gradient.addColorStop(0.7, 'rgba(219, 234, 254, 0.3)');
+    gradient.addColorStop(1, 'rgba(219, 234, 254, 0)');
+
+    ctx.beginPath();
+    ctx.moveTo(130, getStreamY(130, time));
+
+    for (let x = 130; x <= 770; x += 5) {
+      const y = getStreamY(x, time);
+      ctx.lineTo(x, y);
+    }
+
+    ctx.strokeStyle = gradient;
+    ctx.lineWidth = 4;
+    ctx.lineCap = 'round';
+    ctx.stroke();
+  }
+
+  function animate() {
+    time += config.speed;
+    draw();
+    animationId = requestAnimationFrame(animate);
+  }
+
+  // Handle reduced motion preference
+  const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
+
+  if (!prefersReducedMotion.matches) {
+    animate();
+  } else {
+    draw(); // Draw static frame
+  }
+
+  // Cleanup on page navigation
+  document.addEventListener('astro:before-swap', () => {
+    cancelAnimationFrame(animationId);
+  });
+</script>
+
+<style>
+  .overview-diagram-canvas {
+    position: relative;
+    background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+    border-radius: 12px;
+    overflow: hidden;
+  }
+
+  canvas {
+    display: block;
+    width: 100%;
+    height: auto;
+  }
+
+  .overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+  }
+
+  @keyframes flowPath {
+    0% {
+      offset-distance: 0%;
+      opacity: 0;
+    }
+    10% {
+      opacity: 1;
+    }
+    90% {
+      opacity: 1;
+    }
+    100% {
+      offset-distance: 100%;
+      opacity: 0;
+    }
+  }
+
+  .particle {
+    animation: flowPath 3s ease-in-out infinite;
+  }
+
+  /* Input particles */
+  .input-p1 { offset-path: path('M 41,110 C 100,110 140,150 180,175 Q 220,190 280,200'); animation-duration: 2.8s; }
+  .input-p2 { offset-path: path('M 41,155 C 100,155 140,165 180,185 Q 220,195 280,200'); animation-duration: 2.6s; }
+  .input-p3 { offset-path: path('M 41,200 C 100,200 140,200 180,200 Q 220,200 280,200'); animation-duration: 2.4s; }
+  .input-p4 { offset-path: path('M 41,245 C 100,245 140,235 180,215 Q 220,205 280,200'); animation-duration: 2.6s; }
+  .input-p5 { offset-path: path('M 41,290 C 100,290 140,260 180,225 Q 220,210 280,200'); animation-duration: 3s; }
+
+  /* Stream particles */
+  .stream-p1 { offset-path: path('M 150,200 Q 300,180 450,200 Q 600,220 750,200'); animation-duration: 3.5s; }
+  .stream-p2 { offset-path: path('M 150,200 Q 300,220 450,200 Q 600,180 750,200'); animation-duration: 4s; }
+  .stream-p3 { offset-path: path('M 150,200 Q 300,190 450,210 Q 600,190 750,200'); animation-duration: 3.8s; }
+
+  /* Agent particles - bidirectional flow */
+  /* Materializer (top-left at x=290): stream up to agent */
+  .agent-m-up { offset-path: path('M 330,180 Q 310,145 290,108'); animation-duration: 2s; }
+  /* Materializer: agent down to stream */
+  .agent-m-down { offset-path: path('M 290,108 Q 310,145 330,180'); animation-duration: 2.2s; }
+
+  /* Fetcher (top-right at x=610): stream up to agent */
+  .agent-f-up { offset-path: path('M 570,180 Q 590,145 610,108'); animation-duration: 2s; }
+  /* Fetcher: agent down to stream */
+  .agent-f-down { offset-path: path('M 610,108 Q 590,145 570,180'); animation-duration: 2.2s; }
+
+  /* Enricher (bottom-left at x=290): stream down to agent */
+  .agent-e-down { offset-path: path('M 330,220 Q 310,255 290,292'); animation-duration: 2s; }
+  /* Enricher: agent up to stream */
+  .agent-e-up { offset-path: path('M 290,292 Q 310,255 330,220'); animation-duration: 2.2s; }
+
+  /* Pattern Detector (bottom-right at x=610): stream down to agent */
+  .agent-pd-down { offset-path: path('M 570,220 Q 590,255 610,292'); animation-duration: 2s; }
+  /* Pattern Detector: agent up to stream */
+  .agent-pd-up { offset-path: path('M 610,292 Q 590,255 570,220'); animation-duration: 2.2s; }
+
+  /* Output particles - adjusted for new output positions */
+  .output-p1 { offset-path: path('M 700,200 Q 728,155 755,110'); animation-duration: 2.3s; }
+  .output-p2 { offset-path: path('M 710,200 Q 733,175 755,155'); animation-duration: 2.5s; }
+  .output-p3 { offset-path: path('M 710,200 Q 733,200 755,200'); animation-duration: 2.4s; }
+  .output-p4 { offset-path: path('M 700,200 Q 728,225 755,245'); animation-duration: 2.7s; }
+
+  /* Agent hover effect */
+  .agent rect {
+    transition: filter 0.3s ease;
+    pointer-events: auto;
+  }
+  .agent:hover rect {
+    filter: drop-shadow(0 0 6px #3b82f6);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .particle {
+      animation: none;
+      opacity: 0;
+    }
+  }
+</style>

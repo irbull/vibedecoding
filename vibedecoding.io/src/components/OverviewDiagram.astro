@@ -1,0 +1,517 @@
+---
+interface Props {
+  class?: string;
+}
+const { class: className } = Astro.props;
+---
+
+<div class:list={['overview-diagram', className]}>
+  <svg viewBox="0 0 900 400" class="w-full h-auto" role="img" aria-label="Vibe Decoding: Interpreting Life's Signals Over Time - showing event stream with agents processing inputs into insights">
+    <defs>
+      <!-- Organic wave turbulence filter -->
+      <filter id="streamWave" x="-10%" y="-30%" width="120%" height="160%">
+        <feTurbulence type="fractalNoise" baseFrequency="0.02 0.05" numOctaves="2" seed="3" result="noise">
+          <animate attributeName="baseFrequency" values="0.02 0.05;0.025 0.06;0.02 0.05" dur="6s" repeatCount="indefinite" />
+        </feTurbulence>
+        <feDisplacementMap in="SourceGraphic" in2="noise" scale="6" xChannelSelector="R" yChannelSelector="G" />
+      </filter>
+
+      <!-- Stream gradient - rich blue with purple center like original -->
+      <linearGradient id="streamGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+        <stop offset="0%" stop-color="#93c5fd" stop-opacity="0.3" />
+        <stop offset="25%" stop-color="#3b82f6" stop-opacity="0.8" />
+        <stop offset="50%" stop-color="#1e3a8a" stop-opacity="0.9" />
+        <stop offset="75%" stop-color="#3b82f6" stop-opacity="0.8" />
+        <stop offset="100%" stop-color="#93c5fd" stop-opacity="0.3" />
+      </linearGradient>
+
+      <!-- Additional gradient for depth -->
+      <linearGradient id="streamGradientDeep" x1="0%" y1="0%" x2="100%" y2="0%">
+        <stop offset="0%" stop-color="#60a5fa" stop-opacity="0.2" />
+        <stop offset="30%" stop-color="#2563eb" stop-opacity="0.7" />
+        <stop offset="50%" stop-color="#1e40af" stop-opacity="0.85" />
+        <stop offset="70%" stop-color="#2563eb" stop-opacity="0.7" />
+        <stop offset="100%" stop-color="#60a5fa" stop-opacity="0.2" />
+      </linearGradient>
+
+      <!-- Vertical gradient for stream body -->
+      <linearGradient id="streamBodyGradient" x1="0%" y1="0%" x2="0%" y2="100%">
+        <stop offset="0%" stop-color="#93c5fd" stop-opacity="0.4" />
+        <stop offset="30%" stop-color="#60a5fa" stop-opacity="0.7" />
+        <stop offset="50%" stop-color="#2563eb" stop-opacity="0.9" />
+        <stop offset="70%" stop-color="#60a5fa" stop-opacity="0.7" />
+        <stop offset="100%" stop-color="#93c5fd" stop-opacity="0.4" />
+      </linearGradient>
+
+      <!-- Core glow gradient -->
+      <linearGradient id="coreGlow" x1="0%" y1="0%" x2="0%" y2="100%">
+        <stop offset="0%" stop-color="#bfdbfe" stop-opacity="0" />
+        <stop offset="40%" stop-color="#93c5fd" stop-opacity="0.8" />
+        <stop offset="50%" stop-color="#dbeafe" stop-opacity="1" />
+        <stop offset="60%" stop-color="#93c5fd" stop-opacity="0.8" />
+        <stop offset="100%" stop-color="#bfdbfe" stop-opacity="0" />
+      </linearGradient>
+
+      <!-- Blur filter for soft edges -->
+      <filter id="streamBlur" x="-20%" y="-50%" width="140%" height="200%">
+        <feGaussianBlur in="SourceGraphic" stdDeviation="3" />
+      </filter>
+
+      <!-- Glow filter -->
+      <filter id="streamGlow" x="-30%" y="-50%" width="160%" height="200%">
+        <feGaussianBlur in="SourceGraphic" stdDeviation="8" result="blur" />
+        <feMerge>
+          <feMergeNode in="blur" />
+          <feMergeNode in="SourceGraphic" />
+        </feMerge>
+      </filter>
+
+      <!-- Particle glow gradients -->
+      <radialGradient id="particleGlow" cx="50%" cy="50%" r="50%">
+        <stop offset="0%" stop-color="#60a5fa" stop-opacity="1" />
+        <stop offset="60%" stop-color="#3b82f6" stop-opacity="0.7" />
+        <stop offset="100%" stop-color="#1d4ed8" stop-opacity="0" />
+      </radialGradient>
+
+      <radialGradient id="particleGlowLight" cx="50%" cy="50%" r="50%">
+        <stop offset="0%" stop-color="#bfdbfe" stop-opacity="1" />
+        <stop offset="60%" stop-color="#93c5fd" stop-opacity="0.7" />
+        <stop offset="100%" stop-color="#60a5fa" stop-opacity="0" />
+      </radialGradient>
+
+      <!-- Agent box gradient -->
+      <linearGradient id="agentGradient" x1="0%" y1="0%" x2="0%" y2="100%">
+        <stop offset="0%" stop-color="#f8fafc" />
+        <stop offset="100%" stop-color="#e2e8f0" />
+      </linearGradient>
+    </defs>
+
+    <!-- Background -->
+    <rect width="900" height="400" fill="#fafbfd" />
+
+    <!-- Title -->
+    <text x="450" y="35" text-anchor="middle" fill="#1e3a5f" font-size="18" font-weight="600" font-family="system-ui, sans-serif">
+      <tspan fill="#1e40af">Vibe Decoding:</tspan>
+      <tspan fill="#475569" font-style="italic" font-weight="400"> Interpreting Life's Signals Over Time</tspan>
+    </text>
+
+    <!-- Left Inputs - BIGGER ICONS -->
+    <g class="inputs" fill="#64748b" font-size="13" font-family="system-ui, sans-serif">
+      <!-- Voice Notes -->
+      <g transform="translate(25, 110)">
+        <circle cx="16" cy="0" r="16" fill="#dbeafe" stroke="#3b82f6" stroke-width="1.5" />
+        <text x="16" y="5" text-anchor="middle" fill="#3b82f6" font-size="14">&#x1F3A4;</text>
+        <text x="40" y="5" fill="#475569" font-weight="500">Voice Notes</text>
+      </g>
+      <!-- Links -->
+      <g transform="translate(25, 155)">
+        <circle cx="16" cy="0" r="16" fill="#dbeafe" stroke="#3b82f6" stroke-width="1.5" />
+        <text x="16" y="5" text-anchor="middle" fill="#3b82f6" font-size="14">&#x1F517;</text>
+        <text x="40" y="5" fill="#475569" font-weight="500">Links</text>
+      </g>
+      <!-- Annotations -->
+      <g transform="translate(25, 200)">
+        <circle cx="16" cy="0" r="16" fill="#dbeafe" stroke="#3b82f6" stroke-width="1.5" />
+        <text x="16" y="5" text-anchor="middle" fill="#3b82f6" font-size="14">&#x1F4DD;</text>
+        <text x="40" y="5" fill="#475569" font-weight="500">Annotations</text>
+      </g>
+      <!-- Location -->
+      <g transform="translate(25, 245)">
+        <circle cx="16" cy="0" r="16" fill="#dbeafe" stroke="#3b82f6" stroke-width="1.5" />
+        <text x="16" y="5" text-anchor="middle" fill="#3b82f6" font-size="14">&#x1F4CD;</text>
+        <text x="40" y="5" fill="#475569" font-weight="500">Location</text>
+      </g>
+      <!-- Sensors -->
+      <g transform="translate(25, 290)">
+        <circle cx="16" cy="0" r="16" fill="#dbeafe" stroke="#3b82f6" stroke-width="1.5" />
+        <text x="16" y="5" text-anchor="middle" fill="#3b82f6" font-size="14">&#x1F4E1;</text>
+        <text x="40" y="5" fill="#475569" font-weight="500">Sensors</text>
+      </g>
+    </g>
+
+    <!-- Right Outputs - BIGGER ICONS -->
+    <g class="outputs" fill="#64748b" font-size="13" font-family="system-ui, sans-serif">
+      <!-- Timely Reminders -->
+      <g transform="translate(760, 110)">
+        <circle cx="16" cy="0" r="16" fill="#fef3c7" stroke="#f59e0b" stroke-width="1.5" />
+        <text x="16" y="5" text-anchor="middle" fill="#d97706" font-size="14">&#x1F4A1;</text>
+        <text x="-8" y="5" text-anchor="end" fill="#475569" font-weight="500">Timely Reminders</text>
+      </g>
+      <!-- Resurfaced Intent -->
+      <g transform="translate(760, 165)">
+        <circle cx="16" cy="0" r="16" fill="#dcfce7" stroke="#22c55e" stroke-width="1.5" />
+        <text x="16" y="5" text-anchor="middle" fill="#16a34a" font-size="14">&#x1F504;</text>
+        <text x="-8" y="5" text-anchor="end" fill="#475569" font-weight="500">Resurfaced Intent</text>
+      </g>
+      <!-- Contextual Insights -->
+      <g transform="translate(760, 220)">
+        <circle cx="16" cy="0" r="16" fill="#e0e7ff" stroke="#6366f1" stroke-width="1.5" />
+        <text x="16" y="5" text-anchor="middle" fill="#4f46e5" font-size="14">&#x1F4AC;</text>
+        <text x="-8" y="5" text-anchor="end" fill="#475569" font-weight="500">Contextual Insights</text>
+      </g>
+      <!-- Published Knowledge -->
+      <g transform="translate(760, 275)">
+        <circle cx="16" cy="0" r="16" fill="#fce7f3" stroke="#ec4899" stroke-width="1.5" />
+        <text x="16" y="5" text-anchor="middle" fill="#db2777" font-size="14">&#x1F4DA;</text>
+        <text x="-8" y="5" text-anchor="end" fill="#475569" font-weight="500">Published Knowledge</text>
+      </g>
+    </g>
+
+    <!-- Central Stream - Horizontal flowing ribbons like original -->
+    <g class="stream" filter="url(#streamWave)">
+      <!-- Outer soft glow -->
+      <ellipse cx="450" cy="200" rx="300" ry="40" fill="#93c5fd" opacity="0.15" filter="url(#streamBlur)" />
+
+      <!-- Back ribbon - light, wide, gentle S-curve -->
+      <path d="M 130,210
+               Q 250,180 380,215
+               Q 520,250 650,205
+               Q 720,180 770,195"
+            stroke="#bfdbfe"
+            stroke-width="35"
+            fill="none"
+            stroke-linecap="round"
+            opacity="0.4"
+            filter="url(#streamBlur)" />
+
+      <!-- Second back ribbon - offset -->
+      <path d="M 130,190
+               Q 260,220 400,185
+               Q 540,150 680,195
+               Q 740,215 770,205"
+            stroke="#93c5fd"
+            stroke-width="30"
+            fill="none"
+            stroke-linecap="round"
+            opacity="0.45"
+            filter="url(#streamBlur)" />
+
+      <!-- Main ribbon - medium blue -->
+      <path d="M 140,200
+               Q 280,170 420,210
+               Q 560,250 700,195
+               Q 750,175 760,200"
+            stroke="#60a5fa"
+            stroke-width="24"
+            fill="none"
+            stroke-linecap="round"
+            opacity="0.6" />
+
+      <!-- Core ribbon - dark blue/purple center -->
+      <path d="M 150,200
+               Q 290,230 430,190
+               Q 570,150 710,205
+               Q 745,220 755,200"
+            stroke="url(#streamGradientDeep)"
+            stroke-width="18"
+            fill="none"
+            stroke-linecap="round"
+            opacity="0.8" />
+
+      <!-- Inner highlight ribbon -->
+      <path d="M 160,200
+               Q 300,175 440,205
+               Q 580,235 720,195
+               Q 748,185 758,200"
+            stroke="#3b82f6"
+            stroke-width="12"
+            fill="none"
+            stroke-linecap="round"
+            opacity="0.7" />
+
+      <!-- Bright core line -->
+      <path d="M 170,200
+               Q 310,220 450,195
+               Q 590,170 730,205
+               Q 752,212 760,200"
+            stroke="#93c5fd"
+            stroke-width="6"
+            fill="none"
+            stroke-linecap="round"
+            opacity="0.8" />
+
+      <!-- Center glow line -->
+      <path d="M 180,200
+               Q 320,185 460,208
+               Q 600,230 740,195
+               L 755,200"
+            stroke="#dbeafe"
+            stroke-width="3"
+            fill="none"
+            stroke-linecap="round"
+            opacity="0.9" />
+
+      <!-- Sparkle white highlight -->
+      <path d="M 190,200
+               Q 330,210 470,195
+               Q 610,180 750,205"
+            stroke="white"
+            stroke-width="2"
+            fill="none"
+            stroke-linecap="round"
+            opacity="0.5" />
+    </g>
+
+    <!-- Stream Label -->
+    <text x="450" y="205" text-anchor="middle" fill="#1e40af" font-size="14" font-weight="600" font-family="system-ui, sans-serif" opacity="0.9">Event Stream</text>
+
+    <!-- Agent Boxes -->
+    <g class="agents">
+      <!-- Materializer (top left) -->
+      <g transform="translate(280, 90)" class="agent">
+        <rect x="-50" y="-18" width="100" height="36" rx="8" fill="url(#agentGradient)" stroke="#94a3b8" stroke-width="1.5" />
+        <text x="0" y="5" text-anchor="middle" fill="#334155" font-size="12" font-weight="500" font-family="system-ui, sans-serif">Materializer</text>
+      </g>
+
+      <!-- Fetcher (top right) -->
+      <g transform="translate(550, 90)" class="agent">
+        <rect x="-40" y="-18" width="80" height="36" rx="8" fill="url(#agentGradient)" stroke="#94a3b8" stroke-width="1.5" />
+        <text x="0" y="5" text-anchor="middle" fill="#334155" font-size="12" font-weight="500" font-family="system-ui, sans-serif">Fetcher</text>
+      </g>
+
+      <!-- Enricher (bottom left) -->
+      <g transform="translate(300, 310)" class="agent">
+        <rect x="-40" y="-18" width="80" height="36" rx="8" fill="url(#agentGradient)" stroke="#94a3b8" stroke-width="1.5" />
+        <text x="0" y="5" text-anchor="middle" fill="#334155" font-size="12" font-weight="500" font-family="system-ui, sans-serif">Enricher</text>
+      </g>
+
+      <!-- Pattern Detector (bottom right) -->
+      <g transform="translate(530, 310)" class="agent">
+        <rect x="-60" y="-18" width="120" height="36" rx="8" fill="url(#agentGradient)" stroke="#94a3b8" stroke-width="1.5" />
+        <text x="0" y="5" text-anchor="middle" fill="#334155" font-size="12" font-weight="500" font-family="system-ui, sans-serif">Pattern Detector</text>
+      </g>
+    </g>
+
+    <!-- Agent connection lines - THINNER, single elegant curved line per agent -->
+    <g class="agent-lines" stroke="#94a3b8" stroke-width="1" fill="none" opacity="0.4">
+      <!-- Materializer to stream -->
+      <path d="M 280,108 Q 280,145 320,175" />
+      <!-- Fetcher to stream -->
+      <path d="M 550,108 Q 550,145 510,175" />
+      <!-- Enricher to stream -->
+      <path d="M 300,292 Q 300,255 340,225" />
+      <!-- Pattern Detector to stream -->
+      <path d="M 530,292 Q 530,255 490,225" />
+    </g>
+
+    <!-- Animated Particles -->
+    <g class="particles">
+      <!-- Input to stream particles -->
+      <circle class="particle input-p1" r="6" fill="url(#particleGlow)" />
+      <circle class="particle input-p1" r="6" fill="url(#particleGlow)" style="animation-delay: -1.5s" />
+      <circle class="particle input-p2" r="5" fill="url(#particleGlowLight)" />
+      <circle class="particle input-p2" r="5" fill="url(#particleGlowLight)" style="animation-delay: -1.2s" />
+      <circle class="particle input-p3" r="6" fill="url(#particleGlow)" />
+      <circle class="particle input-p3" r="6" fill="url(#particleGlow)" style="animation-delay: -2s" />
+      <circle class="particle input-p4" r="5" fill="url(#particleGlowLight)" />
+      <circle class="particle input-p4" r="5" fill="url(#particleGlowLight)" style="animation-delay: -1.8s" />
+      <circle class="particle input-p5" r="6" fill="url(#particleGlow)" />
+      <circle class="particle input-p5" r="6" fill="url(#particleGlow)" style="animation-delay: -0.8s" />
+
+      <!-- Stream flow particles (following river path) -->
+      <circle class="particle stream-p1" r="5" fill="url(#particleGlow)" />
+      <circle class="particle stream-p1" r="5" fill="url(#particleGlow)" style="animation-delay: -1s" />
+      <circle class="particle stream-p1" r="5" fill="url(#particleGlow)" style="animation-delay: -2s" />
+      <circle class="particle stream-p2" r="4" fill="url(#particleGlowLight)" />
+      <circle class="particle stream-p2" r="4" fill="url(#particleGlowLight)" style="animation-delay: -1.5s" />
+      <circle class="particle stream-p3" r="5" fill="url(#particleGlow)" />
+      <circle class="particle stream-p3" r="5" fill="url(#particleGlow)" style="animation-delay: -0.7s" />
+      <circle class="particle stream-p4" r="4" fill="url(#particleGlowLight)" />
+      <circle class="particle stream-p4" r="4" fill="url(#particleGlowLight)" style="animation-delay: -2.3s" />
+
+      <!-- Agent interaction particles - bidirectional on each line -->
+      <!-- Materializer: stream to agent -->
+      <circle class="particle agent-m1" r="4" fill="url(#particleGlowLight)" />
+      <circle class="particle agent-m1" r="4" fill="url(#particleGlowLight)" style="animation-delay: -1.5s" />
+      <!-- Materializer: agent to stream -->
+      <circle class="particle agent-m2" r="4" fill="url(#particleGlowLight)" />
+      <circle class="particle agent-m2" r="4" fill="url(#particleGlowLight)" style="animation-delay: -1.2s" />
+
+      <!-- Fetcher: stream to agent -->
+      <circle class="particle agent-f1" r="4" fill="url(#particleGlowLight)" />
+      <circle class="particle agent-f1" r="4" fill="url(#particleGlowLight)" style="animation-delay: -1.3s" />
+      <!-- Fetcher: agent to stream -->
+      <circle class="particle agent-f2" r="4" fill="url(#particleGlowLight)" />
+      <circle class="particle agent-f2" r="4" fill="url(#particleGlowLight)" style="animation-delay: -1.8s" />
+
+      <!-- Enricher: stream to agent -->
+      <circle class="particle agent-e1" r="4" fill="url(#particleGlowLight)" />
+      <circle class="particle agent-e1" r="4" fill="url(#particleGlowLight)" style="animation-delay: -1.1s" />
+      <!-- Enricher: agent to stream -->
+      <circle class="particle agent-e2" r="4" fill="url(#particleGlowLight)" />
+      <circle class="particle agent-e2" r="4" fill="url(#particleGlowLight)" style="animation-delay: -1.6s" />
+
+      <!-- Pattern Detector: stream to agent -->
+      <circle class="particle agent-pd1" r="4" fill="url(#particleGlowLight)" />
+      <circle class="particle agent-pd1" r="4" fill="url(#particleGlowLight)" style="animation-delay: -1.4s" />
+      <!-- Pattern Detector: agent to stream -->
+      <circle class="particle agent-pd2" r="4" fill="url(#particleGlowLight)" />
+      <circle class="particle agent-pd2" r="4" fill="url(#particleGlowLight)" style="animation-delay: -1.9s" />
+
+      <!-- Output particles -->
+      <circle class="particle output-p1" r="5" fill="url(#particleGlow)" />
+      <circle class="particle output-p1" r="5" fill="url(#particleGlow)" style="animation-delay: -1.3s" />
+      <circle class="particle output-p2" r="5" fill="url(#particleGlow)" />
+      <circle class="particle output-p2" r="5" fill="url(#particleGlow)" style="animation-delay: -1.8s" />
+      <circle class="particle output-p3" r="5" fill="url(#particleGlow)" />
+      <circle class="particle output-p3" r="5" fill="url(#particleGlow)" style="animation-delay: -0.6s" />
+      <circle class="particle output-p4" r="5" fill="url(#particleGlow)" />
+      <circle class="particle output-p4" r="5" fill="url(#particleGlow)" style="animation-delay: -2.2s" />
+    </g>
+
+    <!-- Caption -->
+    <text x="450" y="375" text-anchor="middle" fill="#64748b" font-size="13" font-style="italic" font-family="system-ui, sans-serif">
+      Agents observe, enrich, and loop context back
+    </text>
+  </svg>
+</div>
+
+<style>
+  .overview-diagram {
+    background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+    border-radius: 12px;
+    overflow: hidden;
+  }
+
+  @keyframes flowPath {
+    0% {
+      offset-distance: 0%;
+      opacity: 0;
+    }
+    10% {
+      opacity: 1;
+    }
+    90% {
+      opacity: 1;
+    }
+    100% {
+      offset-distance: 100%;
+      opacity: 0;
+    }
+  }
+
+  .particle {
+    animation: flowPath 3s ease-in-out infinite;
+  }
+
+  /* Input particles (left side into stream) */
+  .input-p1 {
+    offset-path: path('M 41,110 C 100,110 140,150 180,175 Q 220,190 280,195');
+    animation-duration: 2.8s;
+  }
+  .input-p2 {
+    offset-path: path('M 41,155 C 100,155 140,165 180,180 Q 220,192 280,197');
+    animation-duration: 2.6s;
+  }
+  .input-p3 {
+    offset-path: path('M 41,200 C 100,200 140,200 180,200 Q 220,200 280,200');
+    animation-duration: 2.4s;
+  }
+  .input-p4 {
+    offset-path: path('M 41,245 C 100,245 140,235 180,220 Q 220,208 280,203');
+    animation-duration: 2.6s;
+  }
+  .input-p5 {
+    offset-path: path('M 41,290 C 100,290 140,260 180,230 Q 220,212 280,205');
+    animation-duration: 3s;
+  }
+
+  /* Stream flow particles (following the horizontal S-curve ribbons) */
+  .stream-p1 {
+    offset-path: path('M 140,200 Q 280,170 420,210 Q 560,250 700,195 Q 750,175 760,200');
+    animation-duration: 3.5s;
+  }
+  .stream-p2 {
+    offset-path: path('M 150,200 Q 290,230 430,190 Q 570,150 710,205 Q 745,220 755,200');
+    animation-duration: 4s;
+  }
+  .stream-p3 {
+    offset-path: path('M 160,200 Q 300,175 440,205 Q 580,235 720,195 Q 748,185 758,200');
+    animation-duration: 3.8s;
+  }
+  .stream-p4 {
+    offset-path: path('M 170,200 Q 310,220 450,195 Q 590,170 730,205 Q 752,212 760,200');
+    animation-duration: 4.2s;
+  }
+
+  /* Agent particles - bidirectional flow */
+  /* Materializer */
+  .agent-m1 {
+    offset-path: path('M 320,175 Q 300,140 280,108');
+    animation-duration: 1.8s;
+  }
+  .agent-m2 {
+    offset-path: path('M 280,108 Q 300,140 320,175');
+    animation-duration: 2s;
+  }
+
+  /* Fetcher */
+  .agent-f1 {
+    offset-path: path('M 510,175 Q 530,140 550,108');
+    animation-duration: 1.8s;
+  }
+  .agent-f2 {
+    offset-path: path('M 550,108 Q 530,140 510,175');
+    animation-duration: 2s;
+  }
+
+  /* Enricher */
+  .agent-e1 {
+    offset-path: path('M 340,225 Q 320,258 300,292');
+    animation-duration: 1.8s;
+  }
+  .agent-e2 {
+    offset-path: path('M 300,292 Q 320,258 340,225');
+    animation-duration: 2s;
+  }
+
+  /* Pattern Detector */
+  .agent-pd1 {
+    offset-path: path('M 490,225 Q 510,258 530,292');
+    animation-duration: 1.8s;
+  }
+  .agent-pd2 {
+    offset-path: path('M 530,292 Q 510,258 490,225');
+    animation-duration: 2s;
+  }
+
+  /* Output particles (stream to right side) */
+  .output-p1 {
+    offset-path: path('M 700,195 Q 730,150 776,110');
+    animation-duration: 2.3s;
+  }
+  .output-p2 {
+    offset-path: path('M 710,198 Q 740,175 776,165');
+    animation-duration: 2.5s;
+  }
+  .output-p3 {
+    offset-path: path('M 710,202 Q 740,215 776,220');
+    animation-duration: 2.4s;
+  }
+  .output-p4 {
+    offset-path: path('M 700,205 Q 730,245 776,275');
+    animation-duration: 2.7s;
+  }
+
+  /* Agent pulse effect */
+  .agent rect {
+    transition: filter 0.3s ease;
+  }
+  .agent:hover rect {
+    filter: drop-shadow(0 0 6px #3b82f6);
+  }
+
+  /* Reduced motion preference */
+  @media (prefers-reduced-motion: reduce) {
+    .particle {
+      animation: none;
+      opacity: 0;
+    }
+    .stream-shimmer {
+      animation: none;
+    }
+    .stream {
+      filter: none;
+    }
+  }
+</style>
