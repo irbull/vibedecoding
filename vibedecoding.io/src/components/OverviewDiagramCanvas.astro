@@ -264,7 +264,7 @@ const { class: className } = Astro.props;
     sparkles.push({
       x,
       y: 0,
-      baseY: config.streamY + (Math.random() - 0.5) * 80,  // Spread vertically
+      baseY: config.streamY + (Math.random() - 0.5) * 50,  // Spread vertically (reduced from 80 to fit narrower stream)
       size: 0.5 + Math.random() * 2.5,
       phase: Math.random() * Math.PI * 2,
       twinkleSpeed: 0.03 + Math.random() * 0.05,
@@ -272,14 +272,14 @@ const { class: className } = Astro.props;
     });
   }
 
-  // Get Y position for stream at given x
+  // Get Y position for stream center at given x (matches main stream wave)
   function getStreamY(x: number, t: number): number {
-    // Multiple sine waves for organic motion
-    const y1 = Math.sin(x * 0.008 + t) * 15;
-    const y2 = Math.sin(x * 0.012 + t * 1.3) * 8;
-    const y3 = Math.sin(x * 0.005 + t * 0.7) * 5;
+    // Use same wave parameters as drawUnifiedStream for consistency
+    const wave1 = Math.sin(x * 0.008 + t * 0.6) * 15;
+    const wave2 = Math.sin(x * 0.012 + t * 0.8) * 8;
+    const wave3 = Math.sin(x * 0.005 + t * 0.4) * 5;
 
-    return config.streamY + y1 + y2 + y3;
+    return config.streamY + wave1 + wave2 + wave3;
   }
 
   // Color gradient: purple center, transitioning to light blue at edges
@@ -311,6 +311,9 @@ const { class: className } = Astro.props;
     const streamStart = 130;
     const streamEnd = 770;
 
+    // Draw shadow under the stream
+    drawStreamShadow(streamStart, streamEnd);
+
     // Draw a single unified stream with internal flow variation
     drawUnifiedStream(streamStart, streamEnd);
 
@@ -327,9 +330,55 @@ const { class: className } = Astro.props;
     drawCenterGlow();
   }
 
+  // Draw a soft shadow under the stream
+  function drawStreamShadow(startX: number, endX: number) {
+    const shadowOffset = 8;  // How far below the stream
+    const shadowBlur = 15;   // Blur amount
+    const streamWidth = 70;
+
+    // Build shadow path (same shape as stream, offset down)
+    ctx.beginPath();
+
+    // Top edge of shadow
+    for (let x = startX; x <= endX; x += 3) {
+      const baseY = config.streamY + shadowOffset;
+      const wave1 = Math.sin(x * 0.008 + time * 0.6) * 15;
+      const wave2 = Math.sin(x * 0.012 + time * 0.8) * 8;
+      const wave3 = Math.sin(x * 0.005 + time * 0.4) * 5;
+      const waveOffset = wave1 + wave2 + wave3;
+      const edgeWave = Math.sin(x * 0.015 + time * 0.3) * 8;
+      const y = baseY + waveOffset - streamWidth/2 - edgeWave;
+
+      if (x === startX) ctx.moveTo(x, y);
+      else ctx.lineTo(x, y);
+    }
+
+    // Bottom edge of shadow (reverse)
+    for (let x = endX; x >= startX; x -= 3) {
+      const baseY = config.streamY + shadowOffset;
+      const wave1 = Math.sin(x * 0.008 + time * 0.6) * 15;
+      const wave2 = Math.sin(x * 0.012 + time * 0.8) * 8;
+      const wave3 = Math.sin(x * 0.005 + time * 0.4) * 5;
+      const waveOffset = wave1 + wave2 + wave3;
+      const edgeWave = Math.sin(x * 0.015 + time * 0.3) * 8;
+      const y = baseY + waveOffset + streamWidth/2 + edgeWave;
+
+      ctx.lineTo(x, y);
+    }
+
+    ctx.closePath();
+
+    // Apply shadow with blur
+    ctx.save();
+    ctx.filter = `blur(${shadowBlur}px)`;
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.15)';
+    ctx.fill();
+    ctx.restore();
+  }
+
   // Draw a single unified stream as a filled shape with gradient
   function drawUnifiedStream(startX: number, endX: number) {
-    const streamWidth = 90;  // Total stream height
+    const streamWidth = 70;  // Total stream height
 
     // Build top and bottom edge paths
     const topPoints: {x: number, y: number}[] = [];
@@ -338,14 +387,14 @@ const { class: className } = Astro.props;
     for (let x = startX; x <= endX; x += 3) {
       const baseY = config.streamY;
 
-      // Flowing wave motion for edges
-      const wave1 = Math.sin(x * 0.008 + time) * 15;
-      const wave2 = Math.sin(x * 0.012 + time * 1.3) * 8;
-      const wave3 = Math.sin(x * 0.005 + time * 0.7) * 5;
+      // Flowing wave motion for edges (slowed down by ~40%)
+      const wave1 = Math.sin(x * 0.008 + time * 0.6) * 15;
+      const wave2 = Math.sin(x * 0.012 + time * 0.8) * 8;
+      const wave3 = Math.sin(x * 0.005 + time * 0.4) * 5;
       const waveOffset = wave1 + wave2 + wave3;
 
-      // Edge undulation for organic shape
-      const edgeWave = Math.sin(x * 0.015 + time * 0.5) * 8;
+      // Edge undulation for organic shape (slowed down)
+      const edgeWave = Math.sin(x * 0.015 + time * 0.3) * 8;
 
       topPoints.push({ x, y: baseY + waveOffset - streamWidth/2 - edgeWave });
       bottomPoints.push({ x, y: baseY + waveOffset + streamWidth/2 + edgeWave });
@@ -413,7 +462,7 @@ const { class: className } = Astro.props;
 
   // Draw subtle internal flow lines within the stream
   function drawInternalFlowLines(startX: number, endX: number, topPoints: {x: number, y: number}[], bottomPoints: {x: number, y: number}[]) {
-    const lineCount = 8;
+    const lineCount = 4;
 
     for (let line = 0; line < lineCount; line++) {
       const t = (line + 1) / (lineCount + 1);  // Position from top to bottom
@@ -427,8 +476,8 @@ const { class: className } = Astro.props;
         // Interpolate between top and bottom
         const y = tp.y + (bp.y - tp.y) * t;
 
-        // Add small wave variation for each line
-        const lineWave = Math.sin(tp.x * 0.02 + time * 1.5 + line * 0.7) * 3;
+        // Add small wave variation for each line (slowed down)
+        const lineWave = Math.sin(tp.x * 0.02 + time * 0.9 + line * 0.7) * 3;
 
         if (i === 0) ctx.moveTo(tp.x, y + lineWave);
         else ctx.lineTo(tp.x, y + lineWave);
@@ -453,9 +502,9 @@ const { class: className } = Astro.props;
     const accentColor = { r: 191, g: 219, b: 254 }; // Light blue
 
     // Top accent streams
-    const topOffsets = [-55, -45, -65];
-    const topWidths = [3, 2, 1.5];
-    const topOpacities = [0.35, 0.25, 0.2];
+    const topOffsets = [-60];
+    const topWidths = [2.5];
+    const topOpacities = [0.3];
 
     for (let i = 0; i < topOffsets.length; i++) {
       const yOffset = topOffsets[i];
@@ -471,13 +520,13 @@ const { class: className } = Astro.props;
       grad.addColorStop(1, `rgba(${accentColor.r}, ${accentColor.g}, ${accentColor.b}, 0)`);
 
       ctx.beginPath();
-      ctx.moveTo(streamStart, config.streamY + yOffset + Math.sin(time + phaseOffset) * 8);
+      ctx.moveTo(streamStart, config.streamY + yOffset + Math.sin(time * 0.5 + phaseOffset) * 8);
 
       for (let x = streamStart; x <= streamEnd; x += 4) {
-        // Different wave pattern for accent streams
+        // Different wave pattern for accent streams (slowed down)
         const y = config.streamY + yOffset +
-          Math.sin(x * 0.012 + time * 0.8 + phaseOffset) * 12 +
-          Math.sin(x * 0.006 + time * 0.5 + phaseOffset) * 6;
+          Math.sin(x * 0.012 + time * 0.5 + phaseOffset) * 12 +
+          Math.sin(x * 0.006 + time * 0.3 + phaseOffset) * 6;
         ctx.lineTo(x, y);
       }
 
@@ -489,9 +538,9 @@ const { class: className } = Astro.props;
     }
 
     // Bottom accent streams
-    const bottomOffsets = [55, 45, 65];
-    const bottomWidths = [3, 2, 1.5];
-    const bottomOpacities = [0.35, 0.25, 0.2];
+    const bottomOffsets = [60];
+    const bottomWidths = [2.5];
+    const bottomOpacities = [0.3];
 
     for (let i = 0; i < bottomOffsets.length; i++) {
       const yOffset = bottomOffsets[i];
@@ -507,13 +556,13 @@ const { class: className } = Astro.props;
       grad.addColorStop(1, `rgba(${accentColor.r}, ${accentColor.g}, ${accentColor.b}, 0)`);
 
       ctx.beginPath();
-      ctx.moveTo(streamStart, config.streamY + yOffset + Math.sin(time + phaseOffset) * 8);
+      ctx.moveTo(streamStart, config.streamY + yOffset + Math.sin(time * 0.5 + phaseOffset) * 8);
 
       for (let x = streamStart; x <= streamEnd; x += 4) {
-        // Different wave pattern for accent streams
+        // Different wave pattern for accent streams (slowed down)
         const y = config.streamY + yOffset +
-          Math.sin(x * 0.01 + time * 0.9 + phaseOffset) * 10 +
-          Math.sin(x * 0.007 + time * 0.6 + phaseOffset) * 5;
+          Math.sin(x * 0.01 + time * 0.55 + phaseOffset) * 10 +
+          Math.sin(x * 0.007 + time * 0.35 + phaseOffset) * 5;
         ctx.lineTo(x, y);
       }
 
@@ -523,9 +572,12 @@ const { class: className } = Astro.props;
       ctx.lineJoin = 'round';
       ctx.stroke();
     }
+
   }
 
   function drawParticles() {
+    const streamHalfWidth = 25;  // Keep particles within narrower bounds than stream width (70/2 = 35)
+
     for (const p of particles) {
       // Update particle position
       p.x += p.speed;
@@ -534,7 +586,8 @@ const { class: className } = Astro.props;
       }
 
       // Get Y from stream path with slight vertical offset for variety
-      const verticalOffset = (p.ribbonIndex - 1) * 15;  // Spread particles across stream height
+      // Constrain offset to stay within stream bounds
+      const verticalOffset = (p.ribbonIndex - 0.5) * streamHalfWidth * 0.6;
       p.y = getStreamY(p.x, time) + verticalOffset;
 
       // Draw particle with glow
@@ -551,9 +604,13 @@ const { class: className } = Astro.props;
   }
 
   function drawSparkles() {
+    const streamHalfWidth = 25;  // Keep sparkles within stream bounds
+
     for (const s of sparkles) {
-      // Update sparkle y position to follow the stream movement slightly
-      s.y = s.baseY + Math.sin(time * 0.5 + s.phase) * 10;
+      // Update sparkle y position to follow the stream center
+      const streamCenterY = getStreamY(s.x, time);
+      const offsetFromCenter = (s.baseY - config.streamY);  // Original offset from center
+      s.y = streamCenterY + offsetFromCenter * 0.6;  // Apply reduced offset to stay in stream
 
       // Twinkling opacity
       const twinkle = Math.sin(time * s.twinkleSpeed * 60 + s.phase);
@@ -603,6 +660,70 @@ const { class: className } = Astro.props;
 
     ctx.strokeStyle = gradient;
     ctx.lineWidth = 4;
+    ctx.lineCap = 'round';
+    ctx.stroke();
+
+    // Bank highlights - bright white lines at the stream edges
+    drawBankHighlights();
+  }
+
+  function drawBankHighlights() {
+    const streamStart = 140;
+    const streamEnd = 760;
+
+    // Top bank highlight - follows the top edge of the stream
+    const topGradient = ctx.createLinearGradient(streamStart, 0, streamEnd, 0);
+    topGradient.addColorStop(0, 'rgba(255, 255, 255, 0)');
+    topGradient.addColorStop(0.15, 'rgba(255, 255, 255, 0.6)');
+    topGradient.addColorStop(0.5, 'rgba(255, 255, 255, 0.8)');
+    topGradient.addColorStop(0.85, 'rgba(255, 255, 255, 0.6)');
+    topGradient.addColorStop(1, 'rgba(255, 255, 255, 0)');
+
+    ctx.beginPath();
+    for (let x = streamStart; x <= streamEnd; x += 4) {
+      // Follow the stream shape at the top edge
+      const baseY = config.streamY;
+      const wave1 = Math.sin(x * 0.008 + time * 0.6) * 15;
+      const wave2 = Math.sin(x * 0.012 + time * 0.8) * 8;
+      const wave3 = Math.sin(x * 0.005 + time * 0.4) * 5;
+      const waveOffset = wave1 + wave2 + wave3;
+      const edgeWave = Math.sin(x * 0.015 + time * 0.3) * 8;
+      const y = baseY + waveOffset - 35 - edgeWave; // Top edge position
+
+      if (x === streamStart) ctx.moveTo(x, y);
+      else ctx.lineTo(x, y);
+    }
+
+    ctx.strokeStyle = topGradient;
+    ctx.lineWidth = 2;
+    ctx.lineCap = 'round';
+    ctx.stroke();
+
+    // Bottom bank highlight - follows the bottom edge of the stream
+    const bottomGradient = ctx.createLinearGradient(streamStart, 0, streamEnd, 0);
+    bottomGradient.addColorStop(0, 'rgba(255, 255, 255, 0)');
+    bottomGradient.addColorStop(0.15, 'rgba(255, 255, 255, 0.6)');
+    bottomGradient.addColorStop(0.5, 'rgba(255, 255, 255, 0.8)');
+    bottomGradient.addColorStop(0.85, 'rgba(255, 255, 255, 0.6)');
+    bottomGradient.addColorStop(1, 'rgba(255, 255, 255, 0)');
+
+    ctx.beginPath();
+    for (let x = streamStart; x <= streamEnd; x += 4) {
+      // Follow the stream shape at the bottom edge
+      const baseY = config.streamY;
+      const wave1 = Math.sin(x * 0.008 + time * 0.6) * 15;
+      const wave2 = Math.sin(x * 0.012 + time * 0.8) * 8;
+      const wave3 = Math.sin(x * 0.005 + time * 0.4) * 5;
+      const waveOffset = wave1 + wave2 + wave3;
+      const edgeWave = Math.sin(x * 0.015 + time * 0.3) * 8;
+      const y = baseY + waveOffset + 35 + edgeWave; // Bottom edge position
+
+      if (x === streamStart) ctx.moveTo(x, y);
+      else ctx.lineTo(x, y);
+    }
+
+    ctx.strokeStyle = bottomGradient;
+    ctx.lineWidth = 2;
     ctx.lineCap = 'round';
     ctx.stroke();
   }
