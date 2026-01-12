@@ -1,0 +1,37 @@
+# Dependencies (installed in container)
+node_modules/
+
+# Environment files (secrets)
+.env
+.env.*
+!.env.example
+
+# Logs
+*.log
+logs/
+
+# Infrastructure (not needed in image)
+infrastructure/
+
+# Git
+.git/
+.gitignore
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Build artifacts
+dist/
+*.tsbuildinfo
+
+# Documentation
+*.md
+!README.md
+
+# Test data
+*.sql
