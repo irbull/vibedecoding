@@ -74,7 +74,7 @@ const { class: className } = Astro.props;
       <g transform="translate(745, 155)">
         <circle cx="0" cy="0" r="16" fill="#dcfce7" stroke="#22c55e" stroke-width="1.5" />
         <text x="0" y="5" text-anchor="middle" fill="#16a34a" font-size="14">&#x1F504;</text>
-        <text x="22" y="5" text-anchor="start" fill="#475569" font-weight="500">Resurfaced</text>
+        <text x="22" y="5" text-anchor="start" fill="#475569" font-weight="500">Intents</text>
       </g>
       <g transform="translate(745, 200)">
         <circle cx="0" cy="0" r="16" fill="#e0e7ff" stroke="#6366f1" stroke-width="1.5" />
@@ -219,7 +219,11 @@ const { class: className } = Astro.props;
     sparkleCount: 60,  // Additional sparkle particles
     streamY: 200,
     streamHeight: 50,
-    speed: 0.02
+    speed: 0.02,
+    // Background effects
+    bgOrbCount: 5,
+    bgWaveCount: 3,
+    bgGlowCount: 8
   };
 
   // Particles for the stream effect
@@ -272,6 +276,77 @@ const { class: className } = Astro.props;
     });
   }
 
+  // Background effects
+  interface BgOrb {
+    x: number;
+    y: number;
+    size: number;
+    phase: number;
+    driftSpeed: number;
+    pulseSpeed: number;
+    color: {r: number, g: number, b: number};
+    maxOpacity: number;
+  }
+
+  interface BgGlow {
+    x: number;
+    y: number;
+    size: number;
+    phase: number;
+    fadeSpeed: number;
+    color: {r: number, g: number, b: number};
+    maxOpacity: number;
+  }
+
+  const bgOrbs: BgOrb[] = [];
+  const bgGlows: BgGlow[] = [];
+
+  // Subtle background colors (light blues and purples)
+  const bgColors = [
+    { r: 191, g: 219, b: 254 },  // light blue
+    { r: 199, g: 210, b: 254 },  // light indigo
+    { r: 221, g: 214, b: 254 },  // light violet
+    { r: 224, g: 231, b: 255 },  // very light indigo
+  ];
+
+  // Initialize background orbs - large, soft gradient circles
+  // Use fixed positions for consistent placement
+  const orbPositions = [
+    { x: 150, y: 80 },    // top-left area
+    { x: 750, y: 80 },    // top-right area
+    { x: 120, y: 320 },   // bottom-left area
+    { x: 780, y: 320 },   // bottom-right area
+    { x: 450, y: 350 },   // bottom-center
+  ];
+
+  for (let i = 0; i < config.bgOrbCount; i++) {
+    const pos = orbPositions[i % orbPositions.length];
+
+    bgOrbs.push({
+      x: pos.x,
+      y: pos.y,
+      size: 150 + (i * 20),  // Large orbs (150-230px)
+      phase: i * 1.2,        // Staggered phases
+      driftSpeed: 0.001,
+      pulseSpeed: 0.008,
+      color: bgColors[i % bgColors.length],
+      maxOpacity: 0.35  // Much more visible
+    });
+  }
+
+  // Initialize ambient glow spots - scattered around canvas
+  for (let i = 0; i < config.bgGlowCount; i++) {
+    bgGlows.push({
+      x: 50 + Math.random() * 800,
+      y: 50 + Math.random() * 300,
+      size: 20 + Math.random() * 40,
+      phase: Math.random() * Math.PI * 2,
+      fadeSpeed: 0.02 + Math.random() * 0.03,
+      color: bgColors[Math.floor(Math.random() * bgColors.length)],
+      maxOpacity: 0.06 + Math.random() * 0.06
+    });
+  }
+
   // Get Y position for stream center at given x (matches main stream wave)
   function getStreamY(x: number, t: number): number {
     // Use same wave parameters as drawUnifiedStream for consistency
@@ -305,8 +380,112 @@ const { class: className } = Astro.props;
     };
   }
 
+  // Draw soft gradient orbs near the agents
+  function drawBackgroundOrbs() {
+    // Orbs positioned near agents: Materializer (290,90), Fetcher (610,90), Enricher (290,310), Pattern Detector (610,310)
+    const orbConfigs = [
+      { x: 290, y: 90, size: 180, color: { r: 191, g: 219, b: 254 } },   // near Materializer - light blue
+      { x: 610, y: 90, size: 160, color: { r: 199, g: 210, b: 254 } },   // near Fetcher - light indigo
+      { x: 290, y: 310, size: 170, color: { r: 221, g: 214, b: 254 } },  // near Enricher - light violet
+      { x: 610, y: 310, size: 180, color: { r: 191, g: 219, b: 254 } },  // near Pattern Detector - light blue
+    ];
+
+    for (let i = 0; i < orbConfigs.length; i++) {
+      const orb = orbConfigs[i];
+      const phase = i * 1.5;
+
+      // Gentle drifting motion
+      const driftX = Math.sin(time * 0.05 + phase) * 8;
+      const driftY = Math.cos(time * 0.04 + phase * 1.3) * 6;
+
+      // Pulsing size
+      const pulse = 0.95 + Math.sin(time * 0.4 + phase) * 0.05;
+      const currentSize = orb.size * pulse;
+
+      // Pulsing opacity
+      const opacityPulse = 0.8 + Math.sin(time * 0.3 + phase * 0.7) * 0.2;
+      const baseOpacity = 0.33;  // 33% opacity
+      const currentOpacity = baseOpacity * opacityPulse;
+
+      const x = orb.x + driftX;
+      const y = orb.y + driftY;
+
+      // Draw soft radial gradient orb
+      const gradient = ctx.createRadialGradient(x, y, 0, x, y, currentSize);
+      gradient.addColorStop(0, `rgba(${orb.color.r}, ${orb.color.g}, ${orb.color.b}, ${currentOpacity})`);
+      gradient.addColorStop(0.5, `rgba(${orb.color.r}, ${orb.color.g}, ${orb.color.b}, ${currentOpacity * 0.4})`);
+      gradient.addColorStop(1, `rgba(${orb.color.r}, ${orb.color.g}, ${orb.color.b}, 0)`);
+
+      ctx.beginPath();
+      ctx.arc(x, y, currentSize, 0, Math.PI * 2);
+      ctx.fillStyle = gradient;
+      ctx.fill();
+    }
+  }
+
+  // Draw subtle flowing wave lines in the background
+  function drawBackgroundWaves() {
+    const waveConfigs = [
+      { y: 70, amplitude: 8, frequency: 0.005, speed: 0.3, opacity: 0.06 },
+      { y: 330, amplitude: 10, frequency: 0.004, speed: 0.25, opacity: 0.05 },
+      { y: 370, amplitude: 6, frequency: 0.006, speed: 0.35, opacity: 0.04 },
+    ];
+
+    for (const wave of waveConfigs) {
+      ctx.beginPath();
+
+      for (let x = 0; x <= 900; x += 4) {
+        const y = wave.y +
+          Math.sin(x * wave.frequency + time * wave.speed) * wave.amplitude +
+          Math.sin(x * wave.frequency * 1.5 + time * wave.speed * 0.7) * (wave.amplitude * 0.5);
+
+        if (x === 0) ctx.moveTo(x, y);
+        else ctx.lineTo(x, y);
+      }
+
+      // Create gradient that fades at edges
+      const gradient = ctx.createLinearGradient(0, 0, 900, 0);
+      gradient.addColorStop(0, `rgba(147, 197, 253, 0)`);
+      gradient.addColorStop(0.2, `rgba(147, 197, 253, ${wave.opacity})`);
+      gradient.addColorStop(0.5, `rgba(191, 219, 254, ${wave.opacity * 1.2})`);
+      gradient.addColorStop(0.8, `rgba(147, 197, 253, ${wave.opacity})`);
+      gradient.addColorStop(1, `rgba(147, 197, 253, 0)`);
+
+      ctx.strokeStyle = gradient;
+      ctx.lineWidth = 1.5;
+      ctx.stroke();
+    }
+  }
+
+  // Draw ambient glow spots that fade in and out
+  function drawBackgroundGlows() {
+    for (const glow of bgGlows) {
+      // Fading in/out animation
+      const fadePhase = Math.sin(time * glow.fadeSpeed * 50 + glow.phase);
+      const currentOpacity = glow.maxOpacity * Math.max(0, fadePhase);
+
+      // Only draw if visible
+      if (currentOpacity > 0.01) {
+        const gradient = ctx.createRadialGradient(glow.x, glow.y, 0, glow.x, glow.y, glow.size);
+        gradient.addColorStop(0, `rgba(${glow.color.r}, ${glow.color.g}, ${glow.color.b}, ${currentOpacity})`);
+        gradient.addColorStop(0.5, `rgba(${glow.color.r}, ${glow.color.g}, ${glow.color.b}, ${currentOpacity * 0.4})`);
+        gradient.addColorStop(1, `rgba(${glow.color.r}, ${glow.color.g}, ${glow.color.b}, 0)`);
+
+        ctx.beginPath();
+        ctx.arc(glow.x, glow.y, glow.size, 0, Math.PI * 2);
+        ctx.fillStyle = gradient;
+        ctx.fill();
+      }
+    }
+  }
+
   function draw() {
     ctx.clearRect(0, 0, 900, 400);
+
+    // Draw background effects first (behind everything)
+    drawBackgroundOrbs();
+    drawBackgroundWaves();
+    drawBackgroundGlows();
 
     const streamStart = 130;
     const streamEnd = 770;
