@@ -37,54 +37,84 @@ const { class: className } = Astro.props;
 
     <!-- Left Inputs -->
     <g class="inputs" fill="#64748b" font-size="14" font-family="system-ui, sans-serif">
-      <g transform="translate(25, 110)">
-        <circle cx="16" cy="0" r="16" fill="#dbeafe" stroke="#3b82f6" stroke-width="1.5" />
-        <text x="16" y="5" text-anchor="middle" fill="#3b82f6" font-size="14">&#x1F3A4;</text>
-        <text x="40" y="5" fill="#475569" font-weight="500">Voice Notes</text>
+      <!-- Voice Notes - Microphone icon -->
+      <g transform="translate(15, 110)">
+        <g transform="translate(0, -13) scale(1.8)">
+          <path d="M8 1a3 3 0 0 0-3 3v4a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z" fill="#3b82f6"/>
+          <path d="M13 8a5 5 0 0 1-10 0M8 13v2M6 15h4" stroke="#3b82f6" stroke-width="1" fill="none" stroke-linecap="round"/>
+        </g>
+        <text x="35" y="5" fill="#475569" font-weight="500">Voice Notes</text>
       </g>
-      <g transform="translate(25, 155)">
-        <circle cx="16" cy="0" r="16" fill="#dbeafe" stroke="#3b82f6" stroke-width="1.5" />
-        <text x="16" y="5" text-anchor="middle" fill="#3b82f6" font-size="14">&#x1F517;</text>
-        <text x="40" y="5" fill="#475569" font-weight="500">Links</text>
+      <!-- Links - Chain link icon -->
+      <g transform="translate(15, 155)">
+        <g transform="translate(-3, -17) scale(1.8)">
+          <path d="M10 6H6a4 4 0 0 0 0 8h1M8 10h4M12 6h1a4 4 0 0 1 0 8h-3" stroke="#3b82f6" stroke-width="1.1" fill="none" stroke-linecap="round"/>
+        </g>
+        <text x="35" y="5" fill="#475569" font-weight="500">Links</text>
       </g>
-      <g transform="translate(25, 200)">
-        <circle cx="16" cy="0" r="16" fill="#dbeafe" stroke="#3b82f6" stroke-width="1.5" />
-        <text x="16" y="5" text-anchor="middle" fill="#3b82f6" font-size="14">&#x1F4DD;</text>
-        <text x="40" y="5" fill="#475569" font-weight="500">Annotations</text>
+      <!-- Annotations - Document/notes icon -->
+      <g transform="translate(15, 200)">
+        <g transform="translate(0, -13) scale(1.8)">
+          <rect x="2" y="1" width="12" height="14" rx="1.5" stroke="#3b82f6" stroke-width="1" fill="none"/>
+          <path d="M5 5h6M5 8h6M5 11h4" stroke="#3b82f6" stroke-width="0.8" stroke-linecap="round"/>
+        </g>
+        <text x="35" y="5" fill="#475569" font-weight="500">Annotations</text>
       </g>
-      <g transform="translate(25, 245)">
-        <circle cx="16" cy="0" r="16" fill="#dbeafe" stroke="#3b82f6" stroke-width="1.5" />
-        <text x="16" y="5" text-anchor="middle" fill="#3b82f6" font-size="14">&#x1F4CD;</text>
-        <text x="40" y="5" fill="#475569" font-weight="500">Location</text>
+      <!-- Location - Map pin icon -->
+      <g transform="translate(15, 245)">
+        <g transform="translate(0, -13) scale(1.8)">
+          <path d="M8 1C5.2 1 3 3.2 3 6c0 4 5 9 5 9s5-5 5-9c0-2.8-2.2-5-5-5z" stroke="#3b82f6" stroke-width="1" fill="none"/>
+          <circle cx="8" cy="6" r="2" fill="#3b82f6"/>
+        </g>
+        <text x="35" y="5" fill="#475569" font-weight="500">Location</text>
       </g>
-      <g transform="translate(25, 290)">
-        <circle cx="16" cy="0" r="16" fill="#dbeafe" stroke="#3b82f6" stroke-width="1.5" />
-        <text x="16" y="5" text-anchor="middle" fill="#3b82f6" font-size="14">&#x1F4E1;</text>
-        <text x="40" y="5" fill="#475569" font-weight="500">Sensors</text>
+      <!-- Sensors - Radio/broadcast signal icon -->
+      <g transform="translate(15, 290)">
+        <g transform="translate(2, -13) scale(1.8)">
+          <circle cx="8" cy="8" r="2" fill="#3b82f6"/>
+          <path d="M4.5 4.5a5 5 0 0 1 7 0" stroke="#3b82f6" stroke-width="1" fill="none" stroke-linecap="round"/>
+          <path d="M4.5 11.5a5 5 0 0 0 7 0" stroke="#3b82f6" stroke-width="1" fill="none" stroke-linecap="round"/>
+          <path d="M2 2a8.5 8.5 0 0 1 12 0" stroke="#3b82f6" stroke-width="1" fill="none" stroke-linecap="round"/>
+          <path d="M2 14a8.5 8.5 0 0 0 12 0" stroke="#3b82f6" stroke-width="1" fill="none" stroke-linecap="round"/>
+        </g>
+        <text x="35" y="5" fill="#475569" font-weight="500">Sensors</text>
       </g>
     </g>
 
-    <!-- Right Outputs - icon before text, positioned to fit within viewBox -->
+    <!-- Right Outputs - centered on stream (Y=200) -->
     <g class="outputs" fill="#64748b" font-size="14" font-family="system-ui, sans-serif">
-      <g transform="translate(745, 110)">
-        <circle cx="0" cy="0" r="16" fill="#fef3c7" stroke="#f59e0b" stroke-width="1.5" />
-        <text x="0" y="5" text-anchor="middle" fill="#d97706" font-size="14">&#x1F4A1;</text>
-        <text x="22" y="5" text-anchor="start" fill="#475569" font-weight="500">Reminders</text>
+      <!-- Reminders - Bell/notification icon -->
+      <g transform="translate(755, 130)">
+        <g transform="translate(0, -15) scale(2.1)">
+          <path d="M8 2a4 4 0 0 0-4 4c0 2-1 3.5-1.5 4.5h11c-.5-1-1.5-2.5-1.5-4.5a4 4 0 0 0-4-4z" stroke="#f59e0b" stroke-width="0.9" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+          <path d="M6 10.5c0 1.1.9 2 2 2s2-.9 2-2" stroke="#f59e0b" stroke-width="0.9" fill="none" stroke-linecap="round"/>
+        </g>
+        <text x="40" y="5" fill="#475569" font-weight="500">Reminders</text>
       </g>
-      <g transform="translate(745, 155)">
-        <circle cx="0" cy="0" r="16" fill="#dcfce7" stroke="#22c55e" stroke-width="1.5" />
-        <text x="0" y="5" text-anchor="middle" fill="#16a34a" font-size="14">&#x1F504;</text>
-        <text x="22" y="5" text-anchor="start" fill="#475569" font-weight="500">Intents</text>
+      <!-- Intents - Target/crosshair icon -->
+      <g transform="translate(755, 175)">
+        <g transform="translate(0, -15) scale(2.1)">
+          <circle cx="8" cy="8" r="5" stroke="#22c55e" stroke-width="0.9" fill="none"/>
+          <circle cx="8" cy="8" r="2" stroke="#22c55e" stroke-width="0.9" fill="none"/>
+          <circle cx="8" cy="8" r="0.8" fill="#22c55e"/>
+        </g>
+        <text x="40" y="5" fill="#475569" font-weight="500">Intents</text>
       </g>
-      <g transform="translate(745, 200)">
-        <circle cx="0" cy="0" r="16" fill="#e0e7ff" stroke="#6366f1" stroke-width="1.5" />
-        <text x="0" y="5" text-anchor="middle" fill="#4f46e5" font-size="14">&#x1F4AC;</text>
-        <text x="22" y="5" text-anchor="start" fill="#475569" font-weight="500">Insights</text>
+      <!-- Insights - Lightbulb icon -->
+      <g transform="translate(755, 220)">
+        <g transform="translate(0, -15) scale(2.1)">
+          <path d="M8 2a4 4 0 0 0-2.5 7v1.5h5V9a4 4 0 0 0-2.5-7z" stroke="#6366f1" stroke-width="0.9" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+          <path d="M6 11h4M6.5 12.5h3" stroke="#6366f1" stroke-width="0.7" fill="none" stroke-linecap="round"/>
+        </g>
+        <text x="40" y="5" fill="#475569" font-weight="500">Insights</text>
       </g>
-      <g transform="translate(745, 245)">
-        <circle cx="0" cy="0" r="16" fill="#fce7f3" stroke="#ec4899" stroke-width="1.5" />
-        <text x="0" y="5" text-anchor="middle" fill="#db2777" font-size="14">&#x1F4DA;</text>
-        <text x="22" y="5" text-anchor="start" fill="#475569" font-weight="500">Knowledge</text>
+      <!-- Knowledge - Book icon -->
+      <g transform="translate(755, 265)">
+        <g transform="translate(-2, -15) scale(2.1)">
+          <path d="M2 3h4.5a2.5 2.5 0 0 1 2.5 2.5v8a1.5 1.5 0 0 0-1.5-1.5H2z" stroke="#ec4899" stroke-width="0.9" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+          <path d="M14 3H9.5A2.5 2.5 0 0 0 7 5.5v8a1.5 1.5 0 0 1 1.5-1.5H14z" stroke="#ec4899" stroke-width="0.9" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+        </g>
+        <text x="40" y="5" fill="#475569" font-weight="500">Knowledge</text>
       </g>
     </g>
 
@@ -109,30 +139,6 @@ const { class: className } = Astro.props;
         <rect x="-60" y="-18" width="120" height="36" rx="8" fill="url(#agentGradient)" stroke="#94a3b8" stroke-width="1.5" />
         <text x="0" y="5" text-anchor="middle" fill="#334155" font-size="12" font-weight="500" font-family="system-ui, sans-serif">Pattern Detector</text>
       </g>
-    </g>
-
-    <!-- Agent connection lines - more prominent with gradient -->
-    <defs>
-      <linearGradient id="agentLineGradient" x1="0%" y1="0%" x2="0%" y2="100%">
-        <stop offset="0%" stop-color="#3b82f6" stop-opacity="0.8" />
-        <stop offset="50%" stop-color="#60a5fa" stop-opacity="0.5" />
-        <stop offset="100%" stop-color="#93c5fd" stop-opacity="0.3" />
-      </linearGradient>
-      <linearGradient id="agentLineGradientUp" x1="0%" y1="100%" x2="0%" y2="0%">
-        <stop offset="0%" stop-color="#3b82f6" stop-opacity="0.8" />
-        <stop offset="50%" stop-color="#60a5fa" stop-opacity="0.5" />
-        <stop offset="100%" stop-color="#93c5fd" stop-opacity="0.3" />
-      </linearGradient>
-    </defs>
-    <g class="agent-lines" fill="none">
-      <!-- Materializer (top-left) - at x=290 -->
-      <path d="M 290,108 Q 290,150 330,180" stroke="url(#agentLineGradient)" stroke-width="2.5" stroke-linecap="round" />
-      <!-- Fetcher (top-right) - at x=610 -->
-      <path d="M 610,108 Q 610,150 570,180" stroke="url(#agentLineGradient)" stroke-width="2.5" stroke-linecap="round" />
-      <!-- Enricher (bottom-left) - at x=290 -->
-      <path d="M 290,292 Q 290,250 330,220" stroke="url(#agentLineGradientUp)" stroke-width="2.5" stroke-linecap="round" />
-      <!-- Pattern Detector (bottom-right) - at x=610 -->
-      <path d="M 610,292 Q 610,250 570,220" stroke="url(#agentLineGradientUp)" stroke-width="2.5" stroke-linecap="round" />
     </g>
 
     <!-- Animated Particles -->
@@ -301,12 +307,12 @@ const { class: className } = Astro.props;
   const bgOrbs: BgOrb[] = [];
   const bgGlows: BgGlow[] = [];
 
-  // Subtle background colors (light blues and purples)
+  // Subtle background colors - neutral light grays only
   const bgColors = [
-    { r: 191, g: 219, b: 254 },  // light blue
-    { r: 199, g: 210, b: 254 },  // light indigo
-    { r: 221, g: 214, b: 254 },  // light violet
-    { r: 224, g: 231, b: 255 },  // very light indigo
+    { r: 248, g: 250, b: 252 },  // slate-50
+    { r: 241, g: 245, b: 249 },  // slate-100
+    { r: 226, g: 232, b: 240 },  // slate-200
+    { r: 248, g: 250, b: 252 },  // slate-50
   ];
 
   // Initialize background orbs - large, soft gradient circles
@@ -350,19 +356,20 @@ const { class: className } = Astro.props;
   // Get Y position for stream center at given x (matches main stream wave)
   function getStreamY(x: number, t: number): number {
     // Use same wave parameters as drawUnifiedStream for consistency
-    const wave1 = Math.sin(x * 0.008 + t * 0.6) * 15;
-    const wave2 = Math.sin(x * 0.012 + t * 0.8) * 8;
-    const wave3 = Math.sin(x * 0.005 + t * 0.4) * 5;
+    // Reduced time multipliers for gentler, slower oscillation
+    const wave1 = Math.sin(x * 0.008 + t * 0.25) * 12;
+    const wave2 = Math.sin(x * 0.012 + t * 0.35) * 6;
+    const wave3 = Math.sin(x * 0.005 + t * 0.15) * 4;
 
     return config.streamY + wave1 + wave2 + wave3;
   }
 
   // Color gradient: purple center, transitioning to light blue at edges
   const edgeColor = { r: 147, g: 197, b: 253 };    // Light blue at edges
-  const centerColor = { r: 79, g: 52, b: 186 };    // Darker purple/violet in center
+  const centerColor = { r: 79, g: 70, b: 229 };    // Indigo-600 - slightly deeper
 
   // Get color based on x position (more purple in center, blue at edges)
-  function getColorAtX(x: number, ribbonIndex: number): {r: number, g: number, b: number} {
+  function getColorAtX(x: number): {r: number, g: number, b: number} {
     const streamStart = 130;
     const streamEnd = 770;
     const streamMid = (streamStart + streamEnd) / 2;
@@ -383,11 +390,12 @@ const { class: className } = Astro.props;
   // Draw soft gradient orbs near the agents
   function drawBackgroundOrbs() {
     // Orbs positioned near agents: Materializer (290,90), Fetcher (610,90), Enricher (290,310), Pattern Detector (610,310)
+    // Using more neutral, warm-tinted colors (less saturated blue/purple)
     const orbConfigs = [
-      { x: 290, y: 90, size: 180, color: { r: 191, g: 219, b: 254 } },   // near Materializer - light blue
-      { x: 610, y: 90, size: 160, color: { r: 199, g: 210, b: 254 } },   // near Fetcher - light indigo
-      { x: 290, y: 310, size: 170, color: { r: 221, g: 214, b: 254 } },  // near Enricher - light violet
-      { x: 610, y: 310, size: 180, color: { r: 191, g: 219, b: 254 } },  // near Pattern Detector - light blue
+      { x: 290, y: 90, size: 180, color: { r: 226, g: 232, b: 240 } },   // near Materializer - warm gray
+      { x: 610, y: 90, size: 160, color: { r: 241, g: 245, b: 249 } },   // near Fetcher - light slate
+      { x: 290, y: 310, size: 170, color: { r: 248, g: 250, b: 252 } },  // near Enricher - near white
+      { x: 610, y: 310, size: 180, color: { r: 226, g: 232, b: 240 } },  // near Pattern Detector - warm gray
     ];
 
     for (let i = 0; i < orbConfigs.length; i++) {
@@ -443,13 +451,13 @@ const { class: className } = Astro.props;
         else ctx.lineTo(x, y);
       }
 
-      // Create gradient that fades at edges
+      // Create gradient that fades at edges - neutral gray
       const gradient = ctx.createLinearGradient(0, 0, 900, 0);
-      gradient.addColorStop(0, `rgba(147, 197, 253, 0)`);
-      gradient.addColorStop(0.2, `rgba(147, 197, 253, ${wave.opacity})`);
-      gradient.addColorStop(0.5, `rgba(191, 219, 254, ${wave.opacity * 1.2})`);
-      gradient.addColorStop(0.8, `rgba(147, 197, 253, ${wave.opacity})`);
-      gradient.addColorStop(1, `rgba(147, 197, 253, 0)`);
+      gradient.addColorStop(0, `rgba(203, 213, 225, 0)`);
+      gradient.addColorStop(0.2, `rgba(203, 213, 225, ${wave.opacity})`);
+      gradient.addColorStop(0.5, `rgba(226, 232, 240, ${wave.opacity * 1.2})`);
+      gradient.addColorStop(0.8, `rgba(203, 213, 225, ${wave.opacity})`);
+      gradient.addColorStop(1, `rgba(203, 213, 225, 0)`);
 
       ctx.strokeStyle = gradient;
       ctx.lineWidth = 1.5;
@@ -479,6 +487,74 @@ const { class: className } = Astro.props;
     }
   }
 
+  // Draw agent connection arrows on canvas (behind the stream)
+  function drawAgentArrows() {
+    const arrowColor = '#6385b0';
+    const strokeWidth = 2;
+    const opacity = 0.75;
+
+    ctx.save();
+    ctx.strokeStyle = arrowColor;
+    ctx.lineWidth = strokeWidth;
+    ctx.globalAlpha = opacity;
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+
+    // Arrow paths (quadratic bezier curves)
+    const arrows = [
+      // Materializer (top-left)
+      { start: [250, 108], control: [200, 150], end: [260, 190] },
+      { start: [330, 108], control: [380, 150], end: [320, 190] },
+      // Fetcher (top-right)
+      { start: [570, 108], control: [520, 150], end: [580, 190] },
+      { start: [650, 108], control: [700, 150], end: [640, 190] },
+      // Enricher (bottom-left)
+      { start: [250, 292], control: [200, 250], end: [260, 210] },
+      { start: [330, 292], control: [380, 250], end: [320, 210] },
+      // Pattern Detector (bottom-right)
+      { start: [570, 292], control: [520, 250], end: [580, 210] },
+      { start: [650, 292], control: [700, 250], end: [640, 210] },
+    ];
+
+    for (const arrow of arrows) {
+      const [sx, sy] = arrow.start;
+      const [cx, cy] = arrow.control;
+      const [ex, ey] = arrow.end;
+
+      // Draw the curved line
+      ctx.beginPath();
+      ctx.moveTo(sx, sy);
+      ctx.quadraticCurveTo(cx, cy, ex, ey);
+      ctx.stroke();
+
+      // Draw arrowhead at the end
+      // Calculate the direction at the end of the curve (tangent)
+      // For quadratic bezier, the tangent at t=1 points from control to end
+      const dx = ex - cx;
+      const dy = ey - cy;
+      const angle = Math.atan2(dy, dx);
+
+      // Arrowhead dimensions
+      const headLength = 12;
+      const headAngle = Math.PI / 6; // 30 degrees
+
+      ctx.beginPath();
+      ctx.moveTo(ex, ey);
+      ctx.lineTo(
+        ex - headLength * Math.cos(angle - headAngle),
+        ey - headLength * Math.sin(angle - headAngle)
+      );
+      ctx.moveTo(ex, ey);
+      ctx.lineTo(
+        ex - headLength * Math.cos(angle + headAngle),
+        ey - headLength * Math.sin(angle + headAngle)
+      );
+      ctx.stroke();
+    }
+
+    ctx.restore();
+  }
+
   function draw() {
     ctx.clearRect(0, 0, 900, 400);
 
@@ -487,8 +563,14 @@ const { class: className } = Astro.props;
     drawBackgroundWaves();
     drawBackgroundGlows();
 
+    // Draw agent arrows behind the stream
+    drawAgentArrows();
+
     const streamStart = 130;
     const streamEnd = 770;
+
+    // Draw outer aurora glow (magical diffuse light)
+    drawAuroraGlow(streamStart, streamEnd);
 
     // Draw shadow under the stream
     drawStreamShadow(streamStart, streamEnd);
@@ -509,6 +591,55 @@ const { class: className } = Astro.props;
     drawCenterGlow();
   }
 
+  // Draw a subtle glow effect around the stream
+  function drawAuroraGlow(startX: number, endX: number) {
+    // Softer, more subtle glow layers - less saturated
+    const glowLayers = [
+      { spread: 100, opacity: 0.04, color: { r: 203, g: 213, b: 225 } },  // Outer gray
+      { spread: 70, opacity: 0.06, color: { r: 165, g: 180, b: 210 } },   // Mid muted blue-gray
+      { spread: 45, opacity: 0.08, color: { r: 147, g: 160, b: 200 } },   // Inner muted blue
+    ];
+
+    for (const layer of glowLayers) {
+      ctx.beginPath();
+
+      // Create an elliptical glow path that follows the stream
+      for (let x = startX; x <= endX; x += 5) {
+        const baseY = getStreamY(x, time);
+        const yOffset = Math.sin(x * 0.01 + time * 0.2) * 10;
+
+        if (x === startX) {
+          ctx.moveTo(x, baseY - layer.spread + yOffset);
+        } else {
+          ctx.lineTo(x, baseY - layer.spread + yOffset);
+        }
+      }
+
+      // Bottom edge (reverse)
+      for (let x = endX; x >= startX; x -= 5) {
+        const baseY = getStreamY(x, time);
+        const yOffset = Math.sin(x * 0.01 + time * 0.2) * 10;
+        ctx.lineTo(x, baseY + layer.spread + yOffset);
+      }
+
+      ctx.closePath();
+
+      // Radial-like gradient from center
+      const gradient = ctx.createLinearGradient(startX, 0, endX, 0);
+      const c = layer.color;
+      gradient.addColorStop(0, `rgba(${c.r}, ${c.g}, ${c.b}, 0)`);
+      gradient.addColorStop(0.15, `rgba(${c.r}, ${c.g}, ${c.b}, ${layer.opacity})`);
+      gradient.addColorStop(0.5, `rgba(${c.r}, ${c.g}, ${c.b}, ${layer.opacity * 1.2})`);
+      gradient.addColorStop(0.85, `rgba(${c.r}, ${c.g}, ${c.b}, ${layer.opacity})`);
+      gradient.addColorStop(1, `rgba(${c.r}, ${c.g}, ${c.b}, 0)`);
+
+      ctx.fillStyle = gradient;
+      ctx.filter = 'blur(20px)';
+      ctx.fill();
+      ctx.filter = 'none';
+    }
+  }
+
   // Draw a soft shadow under the stream
   function drawStreamShadow(startX: number, endX: number) {
     const shadowOffset = 8;  // How far below the stream
@@ -521,11 +652,11 @@ const { class: className } = Astro.props;
     // Top edge of shadow
     for (let x = startX; x <= endX; x += 3) {
       const baseY = config.streamY + shadowOffset;
-      const wave1 = Math.sin(x * 0.008 + time * 0.6) * 15;
-      const wave2 = Math.sin(x * 0.012 + time * 0.8) * 8;
-      const wave3 = Math.sin(x * 0.005 + time * 0.4) * 5;
+      const wave1 = Math.sin(x * 0.008 + time * 0.25) * 12;
+      const wave2 = Math.sin(x * 0.012 + time * 0.35) * 6;
+      const wave3 = Math.sin(x * 0.005 + time * 0.15) * 4;
       const waveOffset = wave1 + wave2 + wave3;
-      const edgeWave = Math.sin(x * 0.015 + time * 0.3) * 8;
+      const edgeWave = Math.sin(x * 0.015 + time * 0.12) * 6;
       const y = baseY + waveOffset - streamWidth/2 - edgeWave;
 
       if (x === startX) ctx.moveTo(x, y);
@@ -535,11 +666,11 @@ const { class: className } = Astro.props;
     // Bottom edge of shadow (reverse)
     for (let x = endX; x >= startX; x -= 3) {
       const baseY = config.streamY + shadowOffset;
-      const wave1 = Math.sin(x * 0.008 + time * 0.6) * 15;
-      const wave2 = Math.sin(x * 0.012 + time * 0.8) * 8;
-      const wave3 = Math.sin(x * 0.005 + time * 0.4) * 5;
+      const wave1 = Math.sin(x * 0.008 + time * 0.25) * 12;
+      const wave2 = Math.sin(x * 0.012 + time * 0.35) * 6;
+      const wave3 = Math.sin(x * 0.005 + time * 0.15) * 4;
       const waveOffset = wave1 + wave2 + wave3;
-      const edgeWave = Math.sin(x * 0.015 + time * 0.3) * 8;
+      const edgeWave = Math.sin(x * 0.015 + time * 0.12) * 6;
       const y = baseY + waveOffset + streamWidth/2 + edgeWave;
 
       ctx.lineTo(x, y);
@@ -566,14 +697,14 @@ const { class: className } = Astro.props;
     for (let x = startX; x <= endX; x += 3) {
       const baseY = config.streamY;
 
-      // Flowing wave motion for edges (slowed down by ~40%)
-      const wave1 = Math.sin(x * 0.008 + time * 0.6) * 15;
-      const wave2 = Math.sin(x * 0.012 + time * 0.8) * 8;
-      const wave3 = Math.sin(x * 0.005 + time * 0.4) * 5;
+      // Flowing wave motion for edges (gentle, slow oscillation)
+      const wave1 = Math.sin(x * 0.008 + time * 0.25) * 12;
+      const wave2 = Math.sin(x * 0.012 + time * 0.35) * 6;
+      const wave3 = Math.sin(x * 0.005 + time * 0.15) * 4;
       const waveOffset = wave1 + wave2 + wave3;
 
-      // Edge undulation for organic shape (slowed down)
-      const edgeWave = Math.sin(x * 0.015 + time * 0.3) * 8;
+      // Edge undulation for organic shape (gentle)
+      const edgeWave = Math.sin(x * 0.015 + time * 0.12) * 6;
 
       topPoints.push({ x, y: baseY + waveOffset - streamWidth/2 - edgeWave });
       bottomPoints.push({ x, y: baseY + waveOffset + streamWidth/2 + edgeWave });
@@ -612,24 +743,41 @@ const { class: className } = Astro.props;
 
       ctx.closePath();
 
-      // Gradient fill - more opaque toward center
-      const opacity = 0.15 + t * 0.5;
+      // Gradient fill - more opaque toward center (enhanced for magical effect)
+      const opacity = 0.2 + t * 0.6;  // Increased opacity for richer colors
 
       // Create horizontal gradient for this pass
       // Fade to transparent at start and end for smooth edges
       const gradient = ctx.createLinearGradient(startX, 0, endX, 0);
       const edgeC = edgeColor;
       const centerC = centerColor;
+      // Interpolate between colors for smooth flowing gradient
+      function lerpColor(c1: {r:number,g:number,b:number}, c2: {r:number,g:number,b:number}, t: number) {
+        return {
+          r: Math.round(c1.r + (c2.r - c1.r) * t),
+          g: Math.round(c1.g + (c2.g - c1.g) * t),
+          b: Math.round(c1.b + (c2.b - c1.b) * t)
+        };
+      }
 
-      gradient.addColorStop(0, `rgba(${edgeC.r}, ${edgeC.g}, ${edgeC.b}, 0)`);
-      gradient.addColorStop(0.08, `rgba(${edgeC.r}, ${edgeC.g}, ${edgeC.b}, ${opacity * 0.5})`);
-      gradient.addColorStop(0.15, `rgba(${edgeC.r}, ${edgeC.g}, ${edgeC.b}, ${opacity})`);
-      gradient.addColorStop(0.4, `rgba(${centerC.r}, ${centerC.g}, ${centerC.b}, ${opacity})`);
-      gradient.addColorStop(0.5, `rgba(${centerC.r}, ${centerC.g}, ${centerC.b}, ${opacity})`);
-      gradient.addColorStop(0.6, `rgba(${centerC.r}, ${centerC.g}, ${centerC.b}, ${opacity})`);
-      gradient.addColorStop(0.85, `rgba(${edgeC.r}, ${edgeC.g}, ${edgeC.b}, ${opacity})`);
-      gradient.addColorStop(0.92, `rgba(${edgeC.r}, ${edgeC.g}, ${edgeC.b}, ${opacity * 0.5})`);
-      gradient.addColorStop(1, `rgba(${edgeC.r}, ${edgeC.g}, ${edgeC.b}, 0)`);
+      // Create many small stops for smooth continuous gradient
+      const stops = 20;
+      for (let i = 0; i <= stops; i++) {
+        const pos = i / stops;
+        // Map position to color: edges are blue, center is indigo
+        // Use smooth sine curve for natural transition
+        const distFromCenter = Math.abs(pos - 0.5) * 2; // 0 at center, 1 at edges
+        const colorT = Math.pow(distFromCenter, 1.5); // Ease the transition
+
+        const c = lerpColor(centerC, edgeC, colorT);
+
+        // Opacity fades at edges
+        let opacityMult = 1;
+        if (pos < 0.1) opacityMult = pos / 0.1;
+        else if (pos > 0.9) opacityMult = (1 - pos) / 0.1;
+
+        gradient.addColorStop(pos, `rgba(${c.r}, ${c.g}, ${c.b}, ${opacity * opacityMult})`);
+      }
 
       ctx.fillStyle = gradient;
       ctx.fill();
@@ -663,7 +811,7 @@ const { class: className } = Astro.props;
       }
 
       // Get color at center for this line
-      const color = getColorAtX((startX + endX) / 2, 0);
+      const color = getColorAtX((startX + endX) / 2);
       const opacity = 0.08 + Math.sin(line * 0.5 + time) * 0.03;
 
       ctx.strokeStyle = `rgba(${color.r + 50}, ${color.g + 50}, ${color.b + 50}, ${opacity})`;
@@ -677,81 +825,77 @@ const { class: className } = Astro.props;
     const streamStart = 140;
     const streamEnd = 760;
 
-    // Light blue color for accent streams
-    const accentColor = { r: 191, g: 219, b: 254 }; // Light blue
+    // Subtle flowing streaks - reduced count and opacity
+    const streakConfigs = [
+      // Light indigo streak near top
+      { yOffset: -12, width: 1.2, opacity: 0.25, phase: 0, freq: 0.01, amp: 8, speed: 0.25,
+        color: { r: 165, g: 180, b: 252 } },  // Light indigo
+      // Violet streak in middle
+      { yOffset: 5, width: 1.5, opacity: 0.2, phase: 2.0, freq: 0.012, amp: 6, speed: 0.3,
+        color: { r: 139, g: 92, b: 246 } },   // Violet-500
+    ];
 
-    // Top accent streams
-    const topOffsets = [-60];
-    const topWidths = [2.5];
-    const topOpacities = [0.3];
-
-    for (let i = 0; i < topOffsets.length; i++) {
-      const yOffset = topOffsets[i];
-      const width = topWidths[i];
-      const opacity = topOpacities[i];
-      const phaseOffset = i * 0.5;
-
-      // Create gradient for this accent line
+    for (const streak of streakConfigs) {
+      const c = streak.color;
+      // Create gradient that fades at edges
       const grad = ctx.createLinearGradient(streamStart, 0, streamEnd, 0);
-      grad.addColorStop(0, `rgba(${accentColor.r}, ${accentColor.g}, ${accentColor.b}, 0)`);
-      grad.addColorStop(0.1, `rgba(${accentColor.r}, ${accentColor.g}, ${accentColor.b}, ${opacity})`);
-      grad.addColorStop(0.9, `rgba(${accentColor.r}, ${accentColor.g}, ${accentColor.b}, ${opacity})`);
-      grad.addColorStop(1, `rgba(${accentColor.r}, ${accentColor.g}, ${accentColor.b}, 0)`);
+      grad.addColorStop(0, `rgba(${c.r}, ${c.g}, ${c.b}, 0)`);
+      grad.addColorStop(0.15, `rgba(${c.r}, ${c.g}, ${c.b}, ${streak.opacity * 0.5})`);
+      grad.addColorStop(0.35, `rgba(${c.r}, ${c.g}, ${c.b}, ${streak.opacity})`);
+      grad.addColorStop(0.5, `rgba(${c.r}, ${c.g}, ${c.b}, ${streak.opacity * 1.1})`);
+      grad.addColorStop(0.65, `rgba(${c.r}, ${c.g}, ${c.b}, ${streak.opacity})`);
+      grad.addColorStop(0.85, `rgba(${c.r}, ${c.g}, ${c.b}, ${streak.opacity * 0.5})`);
+      grad.addColorStop(1, `rgba(${c.r}, ${c.g}, ${c.b}, 0)`);
 
       ctx.beginPath();
-      ctx.moveTo(streamStart, config.streamY + yOffset + Math.sin(time * 0.5 + phaseOffset) * 8);
 
-      for (let x = streamStart; x <= streamEnd; x += 4) {
-        // Different wave pattern for accent streams (slowed down)
-        const y = config.streamY + yOffset +
-          Math.sin(x * 0.012 + time * 0.5 + phaseOffset) * 12 +
-          Math.sin(x * 0.006 + time * 0.3 + phaseOffset) * 6;
-        ctx.lineTo(x, y);
+      for (let x = streamStart; x <= streamEnd; x += 3) {
+        const streamCenterY = getStreamY(x, time);
+        const waveY = Math.sin(x * streak.freq + time * streak.speed + streak.phase) * streak.amp +
+                      Math.sin(x * streak.freq * 0.6 + time * streak.speed * 1.2 + streak.phase * 0.5) * (streak.amp * 0.3);
+        const y = streamCenterY + streak.yOffset + waveY;
+
+        if (x === streamStart) ctx.moveTo(x, y);
+        else ctx.lineTo(x, y);
       }
 
       ctx.strokeStyle = grad;
-      ctx.lineWidth = width;
+      ctx.lineWidth = streak.width;
       ctx.lineCap = 'round';
       ctx.lineJoin = 'round';
       ctx.stroke();
     }
 
-    // Bottom accent streams
-    const bottomOffsets = [60];
-    const bottomWidths = [2.5];
-    const bottomOpacities = [0.3];
+    // Outer accent streams (subtle edge glow lines) - light blue
+    const outerAccentColor = { r: 191, g: 219, b: 254 };  // Light blue
+    const outerConfigs = [
+      { yOffset: -55, width: 1.5, opacity: 0.3, phase: 0 },
+      { yOffset: 55, width: 1.5, opacity: 0.3, phase: 2 },
+    ];
 
-    for (let i = 0; i < bottomOffsets.length; i++) {
-      const yOffset = bottomOffsets[i];
-      const width = bottomWidths[i];
-      const opacity = bottomOpacities[i];
-      const phaseOffset = i * 0.7 + 2;
-
-      // Create gradient for this accent line
+    for (const outer of outerConfigs) {
       const grad = ctx.createLinearGradient(streamStart, 0, streamEnd, 0);
-      grad.addColorStop(0, `rgba(${accentColor.r}, ${accentColor.g}, ${accentColor.b}, 0)`);
-      grad.addColorStop(0.1, `rgba(${accentColor.r}, ${accentColor.g}, ${accentColor.b}, ${opacity})`);
-      grad.addColorStop(0.9, `rgba(${accentColor.r}, ${accentColor.g}, ${accentColor.b}, ${opacity})`);
-      grad.addColorStop(1, `rgba(${accentColor.r}, ${accentColor.g}, ${accentColor.b}, 0)`);
+      grad.addColorStop(0, `rgba(${outerAccentColor.r}, ${outerAccentColor.g}, ${outerAccentColor.b}, 0)`);
+      grad.addColorStop(0.15, `rgba(${outerAccentColor.r}, ${outerAccentColor.g}, ${outerAccentColor.b}, ${outer.opacity})`);
+      grad.addColorStop(0.85, `rgba(${outerAccentColor.r}, ${outerAccentColor.g}, ${outerAccentColor.b}, ${outer.opacity})`);
+      grad.addColorStop(1, `rgba(${outerAccentColor.r}, ${outerAccentColor.g}, ${outerAccentColor.b}, 0)`);
 
       ctx.beginPath();
-      ctx.moveTo(streamStart, config.streamY + yOffset + Math.sin(time * 0.5 + phaseOffset) * 8);
-
       for (let x = streamStart; x <= streamEnd; x += 4) {
-        // Different wave pattern for accent streams (slowed down)
-        const y = config.streamY + yOffset +
-          Math.sin(x * 0.01 + time * 0.55 + phaseOffset) * 10 +
-          Math.sin(x * 0.007 + time * 0.35 + phaseOffset) * 5;
-        ctx.lineTo(x, y);
+        const y = config.streamY + outer.yOffset +
+          Math.sin(x * 0.01 + time * 0.2 + outer.phase) * 8 +
+          Math.sin(x * 0.006 + time * 0.12 + outer.phase) * 4;
+
+        if (x === streamStart) ctx.moveTo(x, y);
+        else ctx.lineTo(x, y);
       }
 
       ctx.strokeStyle = grad;
-      ctx.lineWidth = width;
+      ctx.lineWidth = outer.width;
       ctx.lineCap = 'round';
       ctx.lineJoin = 'round';
       ctx.stroke();
     }
-
   }
 
   function drawParticles() {
@@ -783,38 +927,53 @@ const { class: className } = Astro.props;
   }
 
   function drawSparkles() {
-    const streamHalfWidth = 25;  // Keep sparkles within stream bounds
-
     for (const s of sparkles) {
       // Update sparkle y position to follow the stream center
       const streamCenterY = getStreamY(s.x, time);
       const offsetFromCenter = (s.baseY - config.streamY);  // Original offset from center
       s.y = streamCenterY + offsetFromCenter * 0.6;  // Apply reduced offset to stay in stream
 
-      // Twinkling opacity
-      const twinkle = Math.sin(time * s.twinkleSpeed * 60 + s.phase);
-      const opacity = s.maxOpacity * (0.3 + 0.7 * ((twinkle + 1) / 2));
+      // Twinkling opacity - faster, more magical twinkle
+      const twinkle = Math.sin(time * s.twinkleSpeed * 80 + s.phase);
+      const twinkle2 = Math.sin(time * s.twinkleSpeed * 120 + s.phase * 1.5);
+      const combinedTwinkle = (twinkle + twinkle2 * 0.5) / 1.5;
+      const opacity = s.maxOpacity * (0.2 + 0.8 * ((combinedTwinkle + 1) / 2));
 
       // Only show sparkle when it's "on" (above threshold)
-      if (opacity > 0.2) {
-        // Draw sparkle with sharp white center and soft glow
-        const gradient = ctx.createRadialGradient(s.x, s.y, 0, s.x, s.y, s.size * 4);
-        gradient.addColorStop(0, `rgba(255, 255, 255, ${opacity})`);
-        gradient.addColorStop(0.2, `rgba(255, 255, 255, ${opacity * 0.8})`);
-        gradient.addColorStop(0.5, `rgba(219, 234, 254, ${opacity * 0.4})`);
+      if (opacity > 0.15) {
+        // Draw sparkle with sharp white center and soft glow - larger and brighter
+        const glowSize = s.size * 6;
+        const gradient = ctx.createRadialGradient(s.x, s.y, 0, s.x, s.y, glowSize);
+        gradient.addColorStop(0, `rgba(255, 255, 255, ${Math.min(1, opacity * 1.3)})`);
+        gradient.addColorStop(0.15, `rgba(255, 255, 255, ${opacity})`);
+        gradient.addColorStop(0.4, `rgba(219, 234, 254, ${opacity * 0.5})`);
+        gradient.addColorStop(0.7, `rgba(147, 197, 253, ${opacity * 0.2})`);
         gradient.addColorStop(1, 'rgba(147, 197, 253, 0)');
 
         ctx.beginPath();
-        ctx.arc(s.x, s.y, s.size * 4, 0, Math.PI * 2);
+        ctx.arc(s.x, s.y, glowSize, 0, Math.PI * 2);
         ctx.fillStyle = gradient;
         ctx.fill();
 
-        // Add a tiny bright center dot for extra sparkle
-        if (opacity > 0.5 && s.size > 1) {
+        // Add a tiny bright center dot for extra sparkle - always visible when sparkle is on
+        if (opacity > 0.3) {
           ctx.beginPath();
-          ctx.arc(s.x, s.y, s.size * 0.5, 0, Math.PI * 2);
-          ctx.fillStyle = `rgba(255, 255, 255, ${Math.min(1, opacity * 1.5)})`;
+          ctx.arc(s.x, s.y, s.size * 0.8, 0, Math.PI * 2);
+          ctx.fillStyle = `rgba(255, 255, 255, ${Math.min(1, opacity * 1.8)})`;
           ctx.fill();
+        }
+
+        // Add cross-hair sparkle lines for brighter sparkles
+        if (opacity > 0.6 && s.size > 1.5) {
+          const lineLength = s.size * 3;
+          ctx.strokeStyle = `rgba(255, 255, 255, ${opacity * 0.6})`;
+          ctx.lineWidth = 0.5;
+          ctx.beginPath();
+          ctx.moveTo(s.x - lineLength, s.y);
+          ctx.lineTo(s.x + lineLength, s.y);
+          ctx.moveTo(s.x, s.y - lineLength);
+          ctx.lineTo(s.x, s.y + lineLength);
+          ctx.stroke();
         }
       }
     }
@@ -862,11 +1021,11 @@ const { class: className } = Astro.props;
     for (let x = streamStart; x <= streamEnd; x += 4) {
       // Follow the stream shape at the top edge
       const baseY = config.streamY;
-      const wave1 = Math.sin(x * 0.008 + time * 0.6) * 15;
-      const wave2 = Math.sin(x * 0.012 + time * 0.8) * 8;
-      const wave3 = Math.sin(x * 0.005 + time * 0.4) * 5;
+      const wave1 = Math.sin(x * 0.008 + time * 0.25) * 12;
+      const wave2 = Math.sin(x * 0.012 + time * 0.35) * 6;
+      const wave3 = Math.sin(x * 0.005 + time * 0.15) * 4;
       const waveOffset = wave1 + wave2 + wave3;
-      const edgeWave = Math.sin(x * 0.015 + time * 0.3) * 8;
+      const edgeWave = Math.sin(x * 0.015 + time * 0.12) * 6;
       const y = baseY + waveOffset - 35 - edgeWave; // Top edge position
 
       if (x === streamStart) ctx.moveTo(x, y);
@@ -890,11 +1049,11 @@ const { class: className } = Astro.props;
     for (let x = streamStart; x <= streamEnd; x += 4) {
       // Follow the stream shape at the bottom edge
       const baseY = config.streamY;
-      const wave1 = Math.sin(x * 0.008 + time * 0.6) * 15;
-      const wave2 = Math.sin(x * 0.012 + time * 0.8) * 8;
-      const wave3 = Math.sin(x * 0.005 + time * 0.4) * 5;
+      const wave1 = Math.sin(x * 0.008 + time * 0.25) * 12;
+      const wave2 = Math.sin(x * 0.012 + time * 0.35) * 6;
+      const wave3 = Math.sin(x * 0.005 + time * 0.15) * 4;
       const waveOffset = wave1 + wave2 + wave3;
-      const edgeWave = Math.sin(x * 0.015 + time * 0.3) * 8;
+      const edgeWave = Math.sin(x * 0.015 + time * 0.12) * 6;
       const y = baseY + waveOffset + 35 + edgeWave; // Bottom edge position
 
       if (x === streamStart) ctx.moveTo(x, y);
@@ -984,32 +1143,28 @@ const { class: className } = Astro.props;
   .stream-p2 { offset-path: path('M 150,200 Q 300,220 450,200 Q 600,180 750,200'); animation-duration: 4s; }
   .stream-p3 { offset-path: path('M 150,200 Q 300,190 450,210 Q 600,190 750,200'); animation-duration: 3.8s; }
 
-  /* Agent particles - bidirectional flow */
-  /* Materializer (top-left at x=290): stream up to agent */
-  .agent-m-up { offset-path: path('M 330,180 Q 310,145 290,108'); animation-duration: 2s; }
-  /* Materializer: agent down to stream */
-  .agent-m-down { offset-path: path('M 290,108 Q 310,145 330,180'); animation-duration: 2.2s; }
+  /* Agent particles - bidirectional flow (matching smooth arc paths) */
+  /* Materializer (top-left) */
+  .agent-m-up { offset-path: path('M 320,190 Q 380,150 330,108'); animation-duration: 2s; }
+  .agent-m-down { offset-path: path('M 250,108 Q 200,150 260,190'); animation-duration: 2.2s; }
 
-  /* Fetcher (top-right at x=610): stream up to agent */
-  .agent-f-up { offset-path: path('M 570,180 Q 590,145 610,108'); animation-duration: 2s; }
-  /* Fetcher: agent down to stream */
-  .agent-f-down { offset-path: path('M 610,108 Q 590,145 570,180'); animation-duration: 2.2s; }
+  /* Fetcher (top-right) */
+  .agent-f-up { offset-path: path('M 580,190 Q 520,150 570,108'); animation-duration: 2s; }
+  .agent-f-down { offset-path: path('M 650,108 Q 700,150 640,190'); animation-duration: 2.2s; }
 
-  /* Enricher (bottom-left at x=290): stream down to agent */
-  .agent-e-down { offset-path: path('M 330,220 Q 310,255 290,292'); animation-duration: 2s; }
-  /* Enricher: agent up to stream */
-  .agent-e-up { offset-path: path('M 290,292 Q 310,255 330,220'); animation-duration: 2.2s; }
+  /* Enricher (bottom-left) */
+  .agent-e-down { offset-path: path('M 320,210 Q 380,250 330,292'); animation-duration: 2s; }
+  .agent-e-up { offset-path: path('M 250,292 Q 200,250 260,210'); animation-duration: 2.2s; }
 
-  /* Pattern Detector (bottom-right at x=610): stream down to agent */
-  .agent-pd-down { offset-path: path('M 570,220 Q 590,255 610,292'); animation-duration: 2s; }
-  /* Pattern Detector: agent up to stream */
-  .agent-pd-up { offset-path: path('M 610,292 Q 590,255 570,220'); animation-duration: 2.2s; }
+  /* Pattern Detector (bottom-right) */
+  .agent-pd-down { offset-path: path('M 580,210 Q 520,250 570,292'); animation-duration: 2s; }
+  .agent-pd-up { offset-path: path('M 650,292 Q 700,250 640,210'); animation-duration: 2.2s; }
 
   /* Output particles - adjusted for new output positions */
-  .output-p1 { offset-path: path('M 700,200 Q 728,155 755,110'); animation-duration: 2.3s; }
-  .output-p2 { offset-path: path('M 710,200 Q 733,175 755,155'); animation-duration: 2.5s; }
-  .output-p3 { offset-path: path('M 710,200 Q 733,200 755,200'); animation-duration: 2.4s; }
-  .output-p4 { offset-path: path('M 700,200 Q 728,225 755,245'); animation-duration: 2.7s; }
+  .output-p1 { offset-path: path('M 700,200 Q 728,165 755,130'); animation-duration: 2.3s; }
+  .output-p2 { offset-path: path('M 710,200 Q 733,188 755,175'); animation-duration: 2.5s; }
+  .output-p3 { offset-path: path('M 710,200 Q 733,210 755,220'); animation-duration: 2.4s; }
+  .output-p4 { offset-path: path('M 700,200 Q 728,240 755,265'); animation-duration: 2.7s; }
 
   /* Agent hover effect */
   .agent rect {
