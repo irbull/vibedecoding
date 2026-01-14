@@ -1,0 +1,94 @@
+# Local Flink cluster for development
+# Usage:
+#   docker compose -f docker-compose.flink.yml up -d
+#   open http://localhost:8081  (Flink Web UI)
+
+x-flink-common: &flink-common
+  image: flink:1.20-java11
+  volumes:
+    - ./checkpoints:/opt/flink/checkpoints
+    - ./flink:/opt/flink/jobs
+    - ./flink/connectors:/opt/flink/lib/connectors
+  networks:
+    - flink-network
+
+services:
+  # Init container to download connector JARs to local directory
+  init-connectors:
+    image: curlimages/curl:latest
+    user: "${UID:-1000}:${GID:-1000}"
+    volumes:
+      - ./flink/connectors:/connectors
+    command: |
+      sh -c '
+        echo "Downloading Flink connectors..."
+        cd /connectors
+
+        # Kafka connector (for Flink 1.20)
+        if [ ! -f flink-sql-connector-kafka-3.3.0-1.20.jar ]; then
+          echo "Downloading Kafka connector..."
+          curl -sLO https://repo1.maven.org/maven2/org/apache/flink/flink-sql-connector-kafka/3.3.0-1.20/flink-sql-connector-kafka-3.3.0-1.20.jar
+        fi
+
+        # JDBC connector (for Flink 1.20)
+        if [ ! -f flink-connector-jdbc-3.4.0-1.20.jar ]; then
+          echo "Downloading JDBC connector..."
+          curl -sLO https://repo1.maven.org/maven2/org/apache/flink/flink-connector-jdbc/3.4.0-1.20/flink-connector-jdbc-3.4.0-1.20.jar
+        fi
+
+        # PostgreSQL driver
+        if [ ! -f postgresql-42.7.4.jar ]; then
+          echo "Downloading PostgreSQL driver..."
+          curl -sLO https://repo1.maven.org/maven2/org/postgresql/postgresql/42.7.4/postgresql-42.7.4.jar
+        fi
+
+        echo "Connectors ready:"
+        ls -la *.jar 2>/dev/null || echo "No JARs found"
+      '
+
+  jobmanager:
+    <<: *flink-common
+    depends_on:
+      init-connectors:
+        condition: service_completed_successfully
+    ports:
+      - "8081:8081"  # Web UI
+    command: >
+      bash -c "
+        cp /opt/flink/lib/connectors/*.jar /opt/flink/lib/ 2>/dev/null || true
+        /docker-entrypoint.sh jobmanager
+      "
+    environment:
+      - |
+        FLINK_PROPERTIES=
+        jobmanager.rpc.address: jobmanager
+        state.backend: rocksdb
+        state.checkpoints.dir: file:///opt/flink/checkpoints
+        execution.checkpointing.interval: 30s
+        execution.checkpointing.mode: EXACTLY_ONCE
+        execution.checkpointing.min-pause: 10s
+        parallelism.default: 1
+
+  taskmanager:
+    <<: *flink-common
+    depends_on:
+      init-connectors:
+        condition: service_completed_successfully
+      jobmanager:
+        condition: service_started
+    command: >
+      bash -c "
+        cp /opt/flink/lib/connectors/*.jar /opt/flink/lib/ 2>/dev/null || true
+        /docker-entrypoint.sh taskmanager
+      "
+    environment:
+      - |
+        FLINK_PROPERTIES=
+        jobmanager.rpc.address: jobmanager
+        taskmanager.numberOfTaskSlots: 4
+        state.backend: rocksdb
+        state.checkpoints.dir: file:///opt/flink/checkpoints
+
+networks:
+  flink-network:
+    driver: bridge

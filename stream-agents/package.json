@@ -19,7 +19,12 @@
     "clean:link": "bun run scripts/clean_link.ts",
     "retry:failed": "bun run scripts/retry_failed_links.ts",
     "admin:set-visibility": "bun run scripts/admin_set_visibility.ts",
-    "recover:stuck": "bun run scripts/recover_stuck_links.ts"
+    "recover:stuck": "bun run scripts/recover_stuck_links.ts",
+    "flink:start": "docker compose -f docker-compose.flink.yml up -d",
+    "flink:stop": "docker compose -f docker-compose.flink.yml down",
+    "flink:logs": "docker compose -f docker-compose.flink.yml logs -f",
+    "flink:ui": "open http://localhost:8081",
+    "flink:submit": "./flink/submit.sh"
   },
   "dependencies": {
     "@mozilla/readability": "^0.6.0",

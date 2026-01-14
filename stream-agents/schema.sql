@@ -258,3 +258,165 @@ create table if not exists site_builds (
   reason          text null,                         -- "republish", "manual", etc.
   meta            jsonb not null default '{}'::jsonb
 );
+
+
+-- -----------------------------
+-- 9) Flink Materializer Support
+-- -----------------------------
+-- Views with INSTEAD OF INSERT triggers for partial updates from Flink.
+-- Flink's JDBC connector uses upsert semantics (INSERT ON CONFLICT UPDATE).
+-- When the target row doesn't exist, it inserts with NULL for missing columns,
+-- violating NOT NULL constraints. These views intercept INSERTs and convert
+-- them to UPDATEs, which safely do nothing if the row doesn't exist.
+
+-- Status update view
+create or replace view lifestream.flink_links_status_update as
+select subject_id, status from lifestream.links;
+
+create or replace function flink_links_status_update_fn()
+returns trigger as $$
+begin
+    update lifestream.links set status = NEW.status where subject_id = NEW.subject_id;
+    return NEW;
+end;
+$$ language plpgsql;
+
+drop trigger if exists flink_links_status_update_trigger on lifestream.flink_links_status_update;
+create trigger flink_links_status_update_trigger
+instead of insert on lifestream.flink_links_status_update
+for each row execute function flink_links_status_update_fn();
+
+-- Error update view
+create or replace view lifestream.flink_links_error_update as
+select subject_id, status, retry_count, last_error_at, last_error from lifestream.links;
+
+create or replace function flink_links_error_update_fn()
+returns trigger as $$
+begin
+    update lifestream.links
+    set status = NEW.status,
+        retry_count = coalesce(retry_count, 0) + 1,
+        last_error_at = NEW.last_error_at,
+        last_error = NEW.last_error
+    where subject_id = NEW.subject_id;
+    return NEW;
+end;
+$$ language plpgsql;
+
+drop trigger if exists flink_links_error_update_trigger on lifestream.flink_links_error_update;
+create trigger flink_links_error_update_trigger
+instead of insert on lifestream.flink_links_error_update
+for each row execute function flink_links_error_update_fn();
+
+-- Visibility update view
+create or replace view lifestream.flink_links_visibility_update as
+select subject_id, visibility from lifestream.links;
+
+create or replace function flink_links_visibility_update_fn()
+returns trigger as $$
+begin
+    update lifestream.links set visibility = NEW.visibility where subject_id = NEW.subject_id;
+    return NEW;
+end;
+$$ language plpgsql;
+
+drop trigger if exists flink_links_visibility_update_trigger on lifestream.flink_links_visibility_update;
+create trigger flink_links_visibility_update_trigger
+instead of insert on lifestream.flink_links_visibility_update
+for each row execute function flink_links_visibility_update_fn();
+
+-- Link metadata view (converts JSON string tags to array)
+-- Flink JDBC connector doesn't support PostgreSQL ARRAY types, so we accept
+-- tags as a JSON string and convert to text[] in the trigger.
+create or replace view lifestream.flink_link_metadata as
+select subject_id, null::text as tags_json, summary_short, summary_long, language, model_version, updated_at
+from lifestream.link_metadata;
+
+create or replace function flink_link_metadata_fn()
+returns trigger as $$
+declare
+    v_tags text[];
+begin
+    -- Convert JSON array string to PostgreSQL array
+    if NEW.tags_json is not null and NEW.tags_json != '' and NEW.tags_json != 'null' then
+        select array_agg(elem)
+        into v_tags
+        from jsonb_array_elements_text(NEW.tags_json::jsonb) as elem;
+    else
+        v_tags := '{}';
+    end if;
+
+    insert into lifestream.link_metadata (subject_id, tags, summary_short, summary_long, language, model_version, updated_at)
+    values (
+        NEW.subject_id,
+        coalesce(v_tags, '{}'),
+        NEW.summary_short,
+        NEW.summary_long,
+        NEW.language,
+        NEW.model_version,
+        NEW.updated_at
+    )
+    on conflict (subject_id) do update set
+        tags = coalesce(v_tags, lifestream.link_metadata.tags),
+        summary_short = coalesce(NEW.summary_short, lifestream.link_metadata.summary_short),
+        summary_long = coalesce(NEW.summary_long, lifestream.link_metadata.summary_long),
+        language = coalesce(NEW.language, lifestream.link_metadata.language),
+        model_version = coalesce(NEW.model_version, lifestream.link_metadata.model_version),
+        updated_at = NEW.updated_at;
+    return NEW;
+end;
+$$ language plpgsql;
+
+drop trigger if exists flink_link_metadata_trigger on lifestream.flink_link_metadata;
+create trigger flink_link_metadata_trigger
+instead of insert on lifestream.flink_link_metadata
+for each row execute function flink_link_metadata_fn();
+
+-- Todos view (converts JSON string labels to array)
+create or replace view lifestream.flink_todos as
+select subject_id, title, project, null::text as labels_json, status, due_at, completed_at, updated_at, meta::text
+from lifestream.todos;
+
+create or replace function flink_todos_fn()
+returns trigger as $$
+declare
+    v_labels text[];
+begin
+    -- Convert JSON array string to PostgreSQL array
+    if NEW.labels_json is not null and NEW.labels_json != '' and NEW.labels_json != 'null' then
+        select array_agg(elem)
+        into v_labels
+        from jsonb_array_elements_text(NEW.labels_json::jsonb) as elem;
+    else
+        v_labels := '{}';
+    end if;
+
+    insert into lifestream.todos (subject_id, title, project, labels, status, due_at, completed_at, updated_at, meta)
+    values (
+        NEW.subject_id,
+        NEW.title,
+        NEW.project,
+        coalesce(v_labels, '{}'),
+        NEW.status,
+        NEW.due_at,
+        NEW.completed_at,
+        NEW.updated_at,
+        coalesce(NEW.meta::jsonb, '{}'::jsonb)
+    )
+    on conflict (subject_id) do update set
+        title = coalesce(NEW.title, lifestream.todos.title),
+        project = coalesce(NEW.project, lifestream.todos.project),
+        labels = coalesce(v_labels, lifestream.todos.labels),
+        status = coalesce(NEW.status, lifestream.todos.status),
+        due_at = coalesce(NEW.due_at, lifestream.todos.due_at),
+        completed_at = coalesce(NEW.completed_at, lifestream.todos.completed_at),
+        updated_at = NEW.updated_at,
+        meta = coalesce(NEW.meta::jsonb, lifestream.todos.meta);
+    return NEW;
+end;
+$$ language plpgsql;
+
+drop trigger if exists flink_todos_trigger on lifestream.flink_todos;
+create trigger flink_todos_trigger
+instead of insert on lifestream.flink_todos
+for each row execute function flink_todos_fn();

@@ -121,3 +121,7 @@ Thumbs.db
 # AI Tracking
 PROGRESS.md
 plan.md
+
+# Flink
+stream-agents/flink/connectors/*.jar
+stream-agents/checkpoints/

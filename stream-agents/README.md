@@ -190,6 +190,43 @@ bun run agent:publisher    # Marks links as published
 - Dead letter queue retains failed messages for 30 days
 - Failed work can be inspected/replayed manually
 
+---
+
+## Flink Materializer (Alternative)
+
+An alternative Flink SQL-based materializer is available for learning/experimentation. It replaces `kafka:materialize` with Apache Flink's exactly-once semantics.
+
+### Quick Start
+
+```bash
+# 1. Start local Flink cluster (Docker)
+bun run flink:start
+
+# 2. Submit the materializer job
+bun run flink:submit
+
+# 3. Open Web UI to monitor
+bun run flink:ui  # Opens http://localhost:8081
+
+# 4. Stop when done
+bun run flink:stop
+```
+
+### Co-existence with Bun Materializer
+
+Both can run simultaneously using different Kafka consumer groups:
+- **Bun**: `materializer-v1`
+- **Flink**: `flink-materializer-v1`
+
+Each receives all messages independently. Idempotent upserts ensure safe parallel operation.
+
+To stop the Bun materializer on EC2 while testing Flink locally:
+```bash
+ssh workers.vibedecoding.io "cd /data/stream-agents && docker compose stop kafka-materialize"
+```
+
+See [flink/README.md](flink/README.md) for detailed documentation.
+
 ### Known Issues
 - **TimeoutNegativeWarning**: When running with Bun, you may see `TimeoutNegativeWarning: ... is a negative number` at startup. This is a benign warning caused by strict timer validation in the runtime interacting with the KafkaJS library. It does not affect functionality.
 
