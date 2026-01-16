@@ -221,8 +221,8 @@ const { class: className } = Astro.props;
   // Configuration
   const config = {
     ribbonCount: 1,  // Single ribbon for unified look
-    particleCount: 40,
-    sparkleCount: 60,  // Additional sparkle particles
+    particleCount: 25,  // Reduced particle count
+    sparkleCount: 35,   // Reduced sparkle particles
     streamY: 200,
     streamHeight: 50,
     speed: 0.02,
@@ -364,9 +364,9 @@ const { class: className } = Astro.props;
     return config.streamY + wave1 + wave2 + wave3;
   }
 
-  // Color gradient: purple center, transitioning to light blue at edges
-  const edgeColor = { r: 147, g: 197, b: 253 };    // Light blue at edges
-  const centerColor = { r: 79, g: 70, b: 229 };    // Indigo-600 - slightly deeper
+  // Color gradient: softer purple center, transitioning to light blue at edges
+  const edgeColor = { r: 191, g: 219, b: 254 };    // Lighter blue at edges (blue-200)
+  const centerColor = { r: 129, g: 140, b: 248 };  // Softer indigo (indigo-400)
 
   // Get color based on x position (more purple in center, blue at edges)
   function getColorAtX(x: number): {r: number, g: number, b: number} {
@@ -521,34 +521,10 @@ const { class: className } = Astro.props;
       const [cx, cy] = arrow.control;
       const [ex, ey] = arrow.end;
 
-      // Draw the curved line
+      // Draw the curved line (no arrowheads - they're hidden behind the stream)
       ctx.beginPath();
       ctx.moveTo(sx, sy);
       ctx.quadraticCurveTo(cx, cy, ex, ey);
-      ctx.stroke();
-
-      // Draw arrowhead at the end
-      // Calculate the direction at the end of the curve (tangent)
-      // For quadratic bezier, the tangent at t=1 points from control to end
-      const dx = ex - cx;
-      const dy = ey - cy;
-      const angle = Math.atan2(dy, dx);
-
-      // Arrowhead dimensions
-      const headLength = 12;
-      const headAngle = Math.PI / 6; // 30 degrees
-
-      ctx.beginPath();
-      ctx.moveTo(ex, ey);
-      ctx.lineTo(
-        ex - headLength * Math.cos(angle - headAngle),
-        ey - headLength * Math.sin(angle - headAngle)
-      );
-      ctx.moveTo(ex, ey);
-      ctx.lineTo(
-        ex - headLength * Math.cos(angle + headAngle),
-        ey - headLength * Math.sin(angle + headAngle)
-      );
       ctx.stroke();
     }
 
@@ -688,7 +664,7 @@ const { class: className } = Astro.props;
 
   // Draw a single unified stream as a filled shape with gradient
   function drawUnifiedStream(startX: number, endX: number) {
-    const streamWidth = 70;  // Total stream height
+    const streamWidth = 60;  // Total stream height (slightly narrower)
 
     // Build top and bottom edge paths
     const topPoints: {x: number, y: number}[] = [];
@@ -743,8 +719,8 @@ const { class: className } = Astro.props;
 
       ctx.closePath();
 
-      // Gradient fill - more opaque toward center (enhanced for magical effect)
-      const opacity = 0.2 + t * 0.6;  // Increased opacity for richer colors
+      // Gradient fill - softer opacity for more subtle effect
+      const opacity = 0.15 + t * 0.45;  // Reduced opacity for subtler appearance
 
       // Create horizontal gradient for this pass
       // Fade to transparent at start and end for smooth edges
@@ -825,14 +801,14 @@ const { class: className } = Astro.props;
     const streamStart = 140;
     const streamEnd = 760;
 
-    // Subtle flowing streaks - reduced count and opacity
+    // Subtle flowing streaks - gentle and understated
     const streakConfigs = [
       // Light indigo streak near top
-      { yOffset: -12, width: 1.2, opacity: 0.25, phase: 0, freq: 0.01, amp: 8, speed: 0.25,
-        color: { r: 165, g: 180, b: 252 } },  // Light indigo
-      // Violet streak in middle
-      { yOffset: 5, width: 1.5, opacity: 0.2, phase: 2.0, freq: 0.012, amp: 6, speed: 0.3,
-        color: { r: 139, g: 92, b: 246 } },   // Violet-500
+      { yOffset: -12, width: 1, opacity: 0.15, phase: 0, freq: 0.01, amp: 8, speed: 0.25,
+        color: { r: 199, g: 210, b: 254 } },  // Very light indigo
+      // Softer violet streak in middle
+      { yOffset: 5, width: 1.2, opacity: 0.12, phase: 2.0, freq: 0.012, amp: 6, speed: 0.3,
+        color: { r: 167, g: 139, b: 250 } },  // Lighter violet
     ];
 
     for (const streak of streakConfigs) {
@@ -866,11 +842,11 @@ const { class: className } = Astro.props;
       ctx.stroke();
     }
 
-    // Outer accent streams (subtle edge glow lines) - light blue
-    const outerAccentColor = { r: 191, g: 219, b: 254 };  // Light blue
+    // Outer accent streams (subtle edge glow lines) - very light blue
+    const outerAccentColor = { r: 209, g: 230, b: 254 };  // Very light blue
     const outerConfigs = [
-      { yOffset: -55, width: 1.5, opacity: 0.3, phase: 0 },
-      { yOffset: 55, width: 1.5, opacity: 0.3, phase: 2 },
+      { yOffset: -55, width: 1.2, opacity: 0.18, phase: 0 },
+      { yOffset: 55, width: 1.2, opacity: 0.18, phase: 2 },
     ];
 
     for (const outer of outerConfigs) {
@@ -913,14 +889,15 @@ const { class: className } = Astro.props;
       const verticalOffset = (p.ribbonIndex - 0.5) * streamHalfWidth * 0.6;
       p.y = getStreamY(p.x, time) + verticalOffset;
 
-      // Draw particle with glow
-      const gradient = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, p.size * 3);
-      gradient.addColorStop(0, `rgba(255, 255, 255, ${p.opacity})`);
-      gradient.addColorStop(0.5, `rgba(147, 197, 253, ${p.opacity * 0.6})`);
-      gradient.addColorStop(1, 'rgba(59, 130, 246, 0)');
+      // Draw particle with softer glow
+      const adjustedOpacity = p.opacity * 0.7;  // Reduce overall opacity
+      const gradient = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, p.size * 2.5);
+      gradient.addColorStop(0, `rgba(255, 255, 255, ${adjustedOpacity * 0.9})`);
+      gradient.addColorStop(0.4, `rgba(191, 219, 254, ${adjustedOpacity * 0.5})`);
+      gradient.addColorStop(1, 'rgba(147, 197, 253, 0)');
 
       ctx.beginPath();
-      ctx.arc(p.x, p.y, p.size * 3, 0, Math.PI * 2);
+      ctx.arc(p.x, p.y, p.size * 2.5, 0, Math.PI * 2);
       ctx.fillStyle = gradient;
       ctx.fill();
     }
@@ -933,59 +910,47 @@ const { class: className } = Astro.props;
       const offsetFromCenter = (s.baseY - config.streamY);  // Original offset from center
       s.y = streamCenterY + offsetFromCenter * 0.6;  // Apply reduced offset to stay in stream
 
-      // Twinkling opacity - faster, more magical twinkle
-      const twinkle = Math.sin(time * s.twinkleSpeed * 80 + s.phase);
-      const twinkle2 = Math.sin(time * s.twinkleSpeed * 120 + s.phase * 1.5);
+      // Twinkling opacity - gentler twinkle
+      const twinkle = Math.sin(time * s.twinkleSpeed * 60 + s.phase);
+      const twinkle2 = Math.sin(time * s.twinkleSpeed * 90 + s.phase * 1.5);
       const combinedTwinkle = (twinkle + twinkle2 * 0.5) / 1.5;
-      const opacity = s.maxOpacity * (0.2 + 0.8 * ((combinedTwinkle + 1) / 2));
+      const opacity = s.maxOpacity * 0.6 * (0.2 + 0.8 * ((combinedTwinkle + 1) / 2));  // Reduced max opacity
 
       // Only show sparkle when it's "on" (above threshold)
-      if (opacity > 0.15) {
-        // Draw sparkle with sharp white center and soft glow - larger and brighter
-        const glowSize = s.size * 6;
+      if (opacity > 0.12) {
+        // Draw sparkle with softer glow
+        const glowSize = s.size * 4;  // Smaller glow
         const gradient = ctx.createRadialGradient(s.x, s.y, 0, s.x, s.y, glowSize);
-        gradient.addColorStop(0, `rgba(255, 255, 255, ${Math.min(1, opacity * 1.3)})`);
-        gradient.addColorStop(0.15, `rgba(255, 255, 255, ${opacity})`);
-        gradient.addColorStop(0.4, `rgba(219, 234, 254, ${opacity * 0.5})`);
-        gradient.addColorStop(0.7, `rgba(147, 197, 253, ${opacity * 0.2})`);
-        gradient.addColorStop(1, 'rgba(147, 197, 253, 0)');
+        gradient.addColorStop(0, `rgba(255, 255, 255, ${Math.min(0.8, opacity * 1.1)})`);
+        gradient.addColorStop(0.2, `rgba(255, 255, 255, ${opacity * 0.7})`);
+        gradient.addColorStop(0.5, `rgba(219, 234, 254, ${opacity * 0.3})`);
+        gradient.addColorStop(1, 'rgba(191, 219, 254, 0)');
 
         ctx.beginPath();
         ctx.arc(s.x, s.y, glowSize, 0, Math.PI * 2);
         ctx.fillStyle = gradient;
         ctx.fill();
 
-        // Add a tiny bright center dot for extra sparkle - always visible when sparkle is on
-        if (opacity > 0.3) {
+        // Add a tiny bright center dot for extra sparkle - only for brighter ones
+        if (opacity > 0.35) {
           ctx.beginPath();
-          ctx.arc(s.x, s.y, s.size * 0.8, 0, Math.PI * 2);
-          ctx.fillStyle = `rgba(255, 255, 255, ${Math.min(1, opacity * 1.8)})`;
+          ctx.arc(s.x, s.y, s.size * 0.6, 0, Math.PI * 2);
+          ctx.fillStyle = `rgba(255, 255, 255, ${Math.min(0.9, opacity * 1.4)})`;
           ctx.fill();
         }
 
-        // Add cross-hair sparkle lines for brighter sparkles
-        if (opacity > 0.6 && s.size > 1.5) {
-          const lineLength = s.size * 3;
-          ctx.strokeStyle = `rgba(255, 255, 255, ${opacity * 0.6})`;
-          ctx.lineWidth = 0.5;
-          ctx.beginPath();
-          ctx.moveTo(s.x - lineLength, s.y);
-          ctx.lineTo(s.x + lineLength, s.y);
-          ctx.moveTo(s.x, s.y - lineLength);
-          ctx.lineTo(s.x, s.y + lineLength);
-          ctx.stroke();
-        }
+        // Remove cross-hair sparkle lines for cleaner look
       }
     }
   }
 
   function drawCenterGlow() {
-    // Horizontal center glow
+    // Horizontal center glow - softer
     const gradient = ctx.createLinearGradient(130, 0, 770, 0);
     gradient.addColorStop(0, 'rgba(219, 234, 254, 0)');
-    gradient.addColorStop(0.3, 'rgba(219, 234, 254, 0.3)');
-    gradient.addColorStop(0.5, 'rgba(255, 255, 255, 0.4)');
-    gradient.addColorStop(0.7, 'rgba(219, 234, 254, 0.3)');
+    gradient.addColorStop(0.3, 'rgba(219, 234, 254, 0.2)');
+    gradient.addColorStop(0.5, 'rgba(255, 255, 255, 0.25)');
+    gradient.addColorStop(0.7, 'rgba(219, 234, 254, 0.2)');
     gradient.addColorStop(1, 'rgba(219, 234, 254, 0)');
 
     ctx.beginPath();
@@ -1009,12 +974,12 @@ const { class: className } = Astro.props;
     const streamStart = 140;
     const streamEnd = 760;
 
-    // Top bank highlight - follows the top edge of the stream
+    // Top bank highlight - follows the top edge of the stream (softer)
     const topGradient = ctx.createLinearGradient(streamStart, 0, streamEnd, 0);
     topGradient.addColorStop(0, 'rgba(255, 255, 255, 0)');
-    topGradient.addColorStop(0.15, 'rgba(255, 255, 255, 0.6)');
-    topGradient.addColorStop(0.5, 'rgba(255, 255, 255, 0.8)');
-    topGradient.addColorStop(0.85, 'rgba(255, 255, 255, 0.6)');
+    topGradient.addColorStop(0.15, 'rgba(255, 255, 255, 0.35)');
+    topGradient.addColorStop(0.5, 'rgba(255, 255, 255, 0.5)');
+    topGradient.addColorStop(0.85, 'rgba(255, 255, 255, 0.35)');
     topGradient.addColorStop(1, 'rgba(255, 255, 255, 0)');
 
     ctx.beginPath();
@@ -1037,12 +1002,12 @@ const { class: className } = Astro.props;
     ctx.lineCap = 'round';
     ctx.stroke();
 
-    // Bottom bank highlight - follows the bottom edge of the stream
+    // Bottom bank highlight - follows the bottom edge of the stream (softer)
     const bottomGradient = ctx.createLinearGradient(streamStart, 0, streamEnd, 0);
     bottomGradient.addColorStop(0, 'rgba(255, 255, 255, 0)');
-    bottomGradient.addColorStop(0.15, 'rgba(255, 255, 255, 0.6)');
-    bottomGradient.addColorStop(0.5, 'rgba(255, 255, 255, 0.8)');
-    bottomGradient.addColorStop(0.85, 'rgba(255, 255, 255, 0.6)');
+    bottomGradient.addColorStop(0.15, 'rgba(255, 255, 255, 0.35)');
+    bottomGradient.addColorStop(0.5, 'rgba(255, 255, 255, 0.5)');
+    bottomGradient.addColorStop(0.85, 'rgba(255, 255, 255, 0.35)');
     bottomGradient.addColorStop(1, 'rgba(255, 255, 255, 0)');
 
     ctx.beginPath();
