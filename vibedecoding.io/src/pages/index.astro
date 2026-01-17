@@ -12,6 +12,25 @@ import OverviewDiagramCanvas from '../components/OverviewDiagramCanvas.astro';
         <OverviewDiagramCanvas class="w-full rounded-lg shadow-lg" />
       </div>
 
+      <!-- Why I Built This -->
+      <div class="max-w-3xl mx-auto mb-8">
+        <div class="bg-stream-50 border border-stream-200 rounded-lg p-6 text-center">
+          <h2 class="text-xl font-semibold text-[var(--color-text)] mb-3">Why I Built This</h2>
+          <p class="text-[var(--color-text-muted)] mb-4">
+            The AI industry has a memory problem, and streaming is the solution they've overlooked.
+          </p>
+          <a
+            href="/posts/second-brain"
+            class="inline-flex items-center gap-2 text-stream-600 hover:text-stream-700 font-medium transition-colors"
+          >
+            Read: Streaming Is the Memory AI Is Missing
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+            </svg>
+          </a>
+        </div>
+      </div>
+
       <!-- Tagline and Description -->
       <div class="text-center max-w-3xl mx-auto">
         <h1 class="text-3xl sm:text-4xl font-bold text-[var(--color-text)] mb-4">
@@ -74,6 +93,70 @@ import OverviewDiagramCanvas from '../components/OverviewDiagramCanvas.astro';
           <p class="text-sm text-[var(--color-text-muted)]">
             The right information appears at the right time, triggered by context.
           </p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Tools I've Built -->
+  <section class="py-12 border-t border-[var(--color-border)]">
+    <div class="max-w-5xl mx-auto px-4 sm:px-6">
+      <h2 class="text-2xl font-semibold text-[var(--color-text)] mb-4 text-center">Tools I've Built</h2>
+      <p class="text-[var(--color-text-muted)] text-center mb-10 max-w-2xl mx-auto">
+        A suite of applications that work together to capture, manage, and surface information from my digital life.
+      </p>
+
+      <div class="grid gap-8 md:grid-cols-2">
+        <!-- Stream Dashboard -->
+        <div class="bg-[var(--color-bg)] border border-[var(--color-border)] rounded-lg overflow-hidden">
+          <div class="aspect-video bg-stream-100 flex items-center justify-center">
+            <img src="/images/desktop-stream-monitor.jpg" alt="Stream Dashboard" class="w-full h-full object-cover" />
+          </div>
+          <div class="p-5">
+            <h3 class="font-semibold text-[var(--color-text)] mb-2">Stream Dashboard</h3>
+            <p class="text-sm text-[var(--color-text-muted)]">
+              A web dashboard for managing and monitoring my event streams. View incoming events, track agent processing, and explore the enriched data flowing through the system.
+            </p>
+          </div>
+        </div>
+
+        <!-- TODO Desktop App -->
+        <div class="bg-[var(--color-bg)] border border-[var(--color-border)] rounded-lg overflow-hidden">
+          <div class="aspect-video bg-stream-100 flex items-center justify-center">
+            <img src="/images/desktop-todo.jpg" alt="TODO Desktop App" class="w-full h-full object-cover" />
+          </div>
+          <div class="p-5">
+            <h3 class="font-semibold text-[var(--color-text)] mb-2">TODO Desktop App</h3>
+            <p class="text-sm text-[var(--color-text-muted)]">
+              A desktop application for managing tasks that integrates with the event stream. Tasks flow in from various sources and get enriched with context from related events.
+            </p>
+          </div>
+        </div>
+
+        <!-- Mobile Link Sharing -->
+        <div class="bg-[var(--color-bg)] border border-[var(--color-border)] rounded-lg overflow-hidden">
+          <div class="aspect-video bg-stream-100 flex items-center justify-center">
+            <img src="/images/mobile-share.jpg" alt="Mobile Link Sharing App" class="w-full h-full object-cover" />
+          </div>
+          <div class="p-5">
+            <h3 class="font-semibold text-[var(--color-text)] mb-2">Mobile Link Sharing</h3>
+            <p class="text-sm text-[var(--color-text-muted)]">
+              A mobile app for quickly sharing links into the event stream. Found an interesting article? Share it directly and let the agents extract, summarize, and connect it to your existing knowledge.
+            </p>
+          </div>
+        </div>
+
+        <!-- Mobile TODO App -->
+        <div class="bg-[var(--color-bg)] border border-[var(--color-border)] rounded-lg overflow-hidden">
+          <div class="aspect-video bg-stream-100 flex items-center justify-center">
+            <img src="/images/mobile-todo.jpg" alt="Mobile TODO App" class="w-full h-full object-cover" />
+          </div>
+          <div class="p-5">
+            <h3 class="font-semibold text-[var(--color-text)] mb-2">Mobile TODO App</h3>
+            <p class="text-sm text-[var(--color-text-muted)]">
+              Manage tasks on the go with full event stream integration. Capture tasks wherever you are, and they'll be enriched and connected to your broader context automatically.
+            </p>
+          </div>
         </div>
       </div>
     </div>
